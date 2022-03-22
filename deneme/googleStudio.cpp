@@ -56,7 +56,7 @@ int main() {
 	split(dftMap, planesMap);
 	
 	
-    VideoCapture cap("C:/Users/ahmet/Desktop/Matching/googleStudio5fps.mp4");
+    VideoCapture cap("C:/Users/ahmet/Desktop/Matching/framegg.mp4");
     if (!cap.isOpened())
         std::cout << "Video is not opened!" << std::endl;	
 	
@@ -105,11 +105,11 @@ int main() {
 		float lat, longitude;
 		coordinate_calculater(maxLoc.x - frame1 / 2, maxLoc.y - frame2 / 2, lat, longitude);
 
-		cout << "latitude: " << lat << " longitude: " << longitude << endl;
-		cout << "loc: " << maxLoc << "" << endl;
+		cout << "Latitude: " << lat << ", Longitude: " << longitude << endl;
+		cout << "Pixel Loc: " << maxLoc << "" << endl;
 		auto stop = chrono::high_resolution_clock::now();
 		auto duration = chrono::duration_cast<chrono::microseconds>(stop - start);
-		cout << "duration: "  << duration.count() << endl;
+		cout << "Duration: "  << duration.count() << " ms" << endl;
 		
 		Mat found = dst;
 		Mat dstc;
@@ -124,6 +124,7 @@ int main() {
 		imshow("Image Location", foundScl(Range(0, 800), Range(0, 500)));
 		waitKey(1);
 		
+		cout << "\n--------------------------------------\n" << endl;
 		
 		cap >> frame;
 	}

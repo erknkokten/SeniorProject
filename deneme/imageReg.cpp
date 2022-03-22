@@ -43,7 +43,6 @@ void sobelCalc(Mat& img, Mat& real_part, Mat& im_part, bool frameFlag) {
 
 	cv::Mat orientation;
 	cv::phase(image_X, image_Y, orientation, true);
-	cout << "burda" << endl;
 	cv::subtract(orientation, 2 * CV_PI, orientation, (orientation > CV_PI));
 
 	normalize(orientation, orientation, 0, 1, NORM_MINMAX);
