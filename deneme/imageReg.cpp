@@ -7,11 +7,11 @@ using namespace std;
 Mat dft_img(Mat& real_part, Mat& im_part, int m, int n, bool logFlag = false) {
 	Mat padded;
 	Mat padded2;
-
 	copyMakeBorder(real_part, padded, 0, m - real_part.rows, 0, n - real_part.cols, BORDER_CONSTANT, Scalar::all(0));
 	copyMakeBorder(im_part, padded2, 0, m - im_part.rows, 0, n - im_part.cols, BORDER_CONSTANT, Scalar::all(0));
 	Mat planes[] = { Mat_<float>(padded), Mat_<float>(padded2) };
 	Mat complexI;
+	
 	merge(planes, 2, complexI);
 	dft(complexI, complexI);
 	return complexI;
@@ -30,6 +30,7 @@ Mat idft_img(Mat& real_part, Mat& im_part) {
 	return inverseTransform;
 }
 
+
 void sobelCalc(Mat& img, Mat& real_part, Mat& im_part, bool frameFlag) {
 
 	cv::Mat image_X;
@@ -42,7 +43,6 @@ void sobelCalc(Mat& img, Mat& real_part, Mat& im_part, bool frameFlag) {
 
 	cv::Mat orientation;
 	cv::phase(image_X, image_Y, orientation, true);
-	cout << "burda" << endl;
 	cv::subtract(orientation, 2 * CV_PI, orientation, (orientation > CV_PI));
 
 	normalize(orientation, orientation, 0, 1, NORM_MINMAX);
@@ -76,4 +76,42 @@ void sobelCalc(Mat& img, Mat& real_part, Mat& im_part, bool frameFlag) {
 		im_part = -1 * im_part;
 
 	}
+}
+
+
+Mat dft_img2(Mat& input, int m, int n, bool logFlag = false) {
+	Mat complexI;
+
+	copyMakeBorder(input, complexI, 0, m - input.rows, 0, n - input.cols, BORDER_CONSTANT, Scalar::all(0));
+
+	dft(complexI, complexI);
+	return complexI;
+
+}
+
+Mat idft_img2(Mat& mat) {
+
+	cv::Mat inverseTransform;
+	cv::dft(mat, inverseTransform, cv::DFT_INVERSE | DFT_REAL_OUTPUT);
+
+	return inverseTransform;
+}
+
+void sobelCalc2(Mat& img, Mat& sobel, bool frameFlag) {
+
+	cv::Mat image_X;
+	cv::Sobel(img, image_X, CV_64FC1, 1, 0, 7);
+	cv::Mat image_Y;
+	cv::Sobel(img, image_Y, CV_64FC1, 0, 1, 7);
+
+	image_X.convertTo(image_X, CV_64FC1, 1.0 / 255.0);
+	image_Y.convertTo(image_Y, CV_64FC1, 1.0 / 255.0);
+
+	cv::phase(image_X, image_Y, sobel, true);
+	cout << "burda" << endl;
+	cv::subtract(sobel, 2 * CV_PI, sobel, (sobel > CV_PI));
+
+	normalize(sobel, sobel, 0, 1, NORM_MINMAX);
+
+
 }
