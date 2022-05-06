@@ -19,12 +19,14 @@
 #include <opencv2/highgui.hpp> 
 #include <opencv2/features2d.hpp>
 #include <opencv2/imgcodecs.hpp>
+#include <opencv2/core/cuda.hpp>
 
 #include "imageReg.h"
 #include "visualOdometry.h"
 
 
 using namespace cv;
+using namespace cv::cuda;
 using namespace std;
 
 #define imSizeRow 2048
@@ -39,7 +41,6 @@ int main() {
 	//Mat dst;
 	//resize(map, dst, size);
 
-
 	Mat real_part_map, im_part_map;
 	sobelCalc(dst, real_part_map, im_part_map, false);
 	Mat dftMap = dft_img(real_part_map, im_part_map, imSizeRow, imSizeCol, false);
@@ -48,7 +49,8 @@ int main() {
 	Mat imMap(imSizeRow, imSizeCol, CV_64FC1);
 	Mat planesMap[] = { Mat_<float>(realMap), Mat_<float>(imMap) };
 	split(dftMap, planesMap);
-
+	
+	
 
 	VideoCapture cap("C:/Users/ahmet/Desktop/Matching/framegg.mp4");
 	if (!cap.isOpened())
@@ -61,7 +63,7 @@ int main() {
 	// Videodan frame çekme iþlemleri baþlýyor
 	Mat frame, frameGray, framePrior, framePriorGray;
 	cap >> framePrior;
-	cvtColor(framePrior, framePriorGray, COLOR_BGR2GRAY);
+	cv::cvtColor(framePrior, framePriorGray, COLOR_BGR2GRAY);
 	cap >> frame;
 
 	int pixel1 = 0;
@@ -74,7 +76,8 @@ int main() {
 
 	while (!frame.empty()) {
 		auto start = chrono::high_resolution_clock::now();
-		cvtColor(frame, frameGray, COLOR_BGR2GRAY);
+		cv::cvtColor(frame, frameGray, COLOR_BGR2GRAY);
+		
 
 		float lat, longitude;
 		// Image Registration part
@@ -86,25 +89,27 @@ int main() {
 		int a = 0;
 		Kalman(Z, X_0, P_0, 0.2);
 		cout << "X_0 = " << endl << " " << X_0 << endl << endl;
-		cout << "SpeedX: " << speedX << "SpeedY: " << speedY << "\n" << endl;
-		cout << "Latitude: " << lat << ", Longitude: " << longitude << endl;
 		cout << "Pixel Loc: " << maxLoc << "" << endl;
+		/*cout << "SpeedX: " << speedX << ", SpeedY: " << speedY << "\n" << endl;
+		cout << "Latitude: " << lat << ", Longitude: " << longitude << endl;
+		cout << "Pixel Loc: " << maxLoc << "" << endl;*/
 		auto stop = chrono::high_resolution_clock::now();
 		auto duration = chrono::duration_cast<chrono::microseconds>(stop - start);
 		cout << "Duration: " << duration.count() << " ms" << endl;
 
 		Mat found = dst;
 		Mat dstc;
-		cvtColor(found, dstc, COLOR_GRAY2BGR);
-		Point other(maxLoc.x - frame1, maxLoc.y - frame2);
-		cv::rectangle(dstc, other, maxLoc, cv::Scalar(0, 255, 0), 4);
+		cv::cvtColor(found, dstc, COLOR_GRAY2BGR);
+		Point p(X_0.at<float>(0, 0), X_0.at<float>(1, 0));
+		Point other(p.x - frame1, p.y - frame2);
+		cv::rectangle(dstc, other, p, cv::Scalar(0, 255, 0), 4);
 
 
 		Size size(1024, 1024);
 		Mat foundScl;
-		resize(dstc, foundScl, size);
-		imshow("Image Location", foundScl(Range(0, 800), Range(0, 500)));
-		waitKey(1);
+		cv::resize(dstc, foundScl, size);
+		cv::imshow("Image Location", foundScl(Range(0, 800), Range(0, 500)));
+		cv::waitKey(1);
 
 
 
@@ -115,7 +120,7 @@ int main() {
 	}
 
 	cap.release();
-	destroyAllWindows();
+	cv::destroyAllWindows();
 
 	return 0;
 }
