@@ -19,14 +19,12 @@
 #include <opencv2/highgui.hpp> 
 #include <opencv2/features2d.hpp>
 #include <opencv2/imgcodecs.hpp>
-#include <opencv2/core/cuda.hpp>
 
 #include "imageReg.h"
 #include "visualOdometry.h"
 
 
 using namespace cv;
-using namespace cv::cuda;
 using namespace std;
 
 #define imSizeRow 2048
@@ -49,7 +47,12 @@ int main() {
 	Mat imMap(imSizeRow, imSizeCol, CV_64FC1);
 	Mat planesMap[] = { Mat_<float>(realMap), Mat_<float>(imMap) };
 	split(dftMap, planesMap);
-	
+	float delta_t = 0.2;
+	Mat Q = (Mat_<float>(4, 4) <<
+		pow(delta_t, 4) / 4, 0, pow(delta_t, 3) / 2, 0,
+		0, pow(delta_t, 4) / 4, 0, pow(delta_t, 3) / 2,
+		pow(delta_t, 3) / 2, 0, pow(delta_t, 2), 0,
+		0, pow(delta_t, 3) / 2, 0, pow(delta_t, 2));	
 	
 
 	VideoCapture cap("C:/Users/ahmet/Desktop/Matching/framegg.mp4");
@@ -74,6 +77,7 @@ int main() {
 	Mat X_0 = (Mat_<float>(4, 1) << pixel1 / 500, pixel2 / 500, 4.846 / 2, 8.747 / 2);
 	Mat P_0 = Mat::eye(4, 4, CV_32F) * 200;
 
+
 	while (!frame.empty()) {
 		auto start = chrono::high_resolution_clock::now();
 		cv::cvtColor(frame, frameGray, COLOR_BGR2GRAY);
@@ -85,11 +89,18 @@ int main() {
 
 		// Visual Odometry part
 		visOdo(&framePriorGray, &frameGray, speedX, speedY);
+		speedX = 2.5/5;
+		speedY = -4.375/5;
+		
 		Mat Z = (Mat_<float>(4, 1) << (float)maxLoc.x, (float)maxLoc.y, speedX, speedY);
 		int a = 0;
-		Kalman(Z, X_0, P_0, 0.2);
+		Kalman(Z, X_0, P_0, delta_t, Q);
 		cout << "X_0 = " << endl << " " << X_0 << endl << endl;
 		cout << "Pixel Loc: " << maxLoc << "" << endl;
+
+		
+		cout << "SpeedX: " << speedX << ", SpeedY: " << speedY << "\n" << "Overall speed: " << sqrt(pow(speedX, 2) + pow(speedY, 2)) << endl;
+
 		/*cout << "SpeedX: " << speedX << ", SpeedY: " << speedY << "\n" << endl;
 		cout << "Latitude: " << lat << ", Longitude: " << longitude << endl;
 		cout << "Pixel Loc: " << maxLoc << "" << endl;*/
@@ -102,15 +113,15 @@ int main() {
 		cv::cvtColor(found, dstc, COLOR_GRAY2BGR);
 		Point p(X_0.at<float>(0, 0), X_0.at<float>(1, 0));
 		Point other(p.x - frame1, p.y - frame2);
+		Point imRegx(maxLoc.x - frame1, maxLoc.y - frame2);
 		cv::rectangle(dstc, other, p, cv::Scalar(0, 255, 0), 4);
-
+		cv::rectangle(dstc, maxLoc, imRegx, cv::Scalar(0, 0, 255), 4);
 
 		Size size(1024, 1024);
 		Mat foundScl;
 		cv::resize(dstc, foundScl, size);
 		cv::imshow("Image Location", foundScl(Range(0, 800), Range(0, 500)));
 		cv::waitKey(1);
-
 
 
 

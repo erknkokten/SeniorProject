@@ -35,4 +35,4 @@ using namespace std::chrono;
 #define sampleperiod 0.2
 
 void visOdo(Mat* img_1, Mat* img_2, double& speedX, double& speedY);
-void Kalman(Mat Z, Mat& X_nn_1, Mat& P_nn_1, float delta_t);
+void Kalman(Mat Z, Mat& X_nn_1, Mat& P_nn_1, float delta_t, Mat& Q);

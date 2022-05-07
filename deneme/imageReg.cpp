@@ -140,16 +140,16 @@ void sobelCalc(Mat& img, Mat& real_part, Mat& im_part, bool frameFlag) {
 
 	}
 }
+/*
 
-
-void imRegGPU(Mat* planesMap, Mat* frameGray, int imSizeRow, int imSizeCol, int frame1, int frame2, float& lat, float& longitude, Point& maxLoc)
+void imRegGPU(Mat* planesMap, Mat* frameGpu, int imSizeRow, int imSizeCol, int frame1, int frame2, float& lat, float& longitude, Point& maxLoc)
 {
 	// defining the matrices for frame operations
-	Mat real_part_frame, im_part_frame;
-	Mat realFrame(imSizeRow, imSizeCol, CV_64FC1);
-	Mat imFrame(imSizeRow, imSizeCol, CV_64FC1);
-	Mat dftFrame, idftResult;
-	Mat mulReal, mulIm;
+	cv::cuda::GpuMat real_part_frame, im_part_frame;
+	cv::cuda::GpuMat realFrame(imSizeRow, imSizeCol, CV_64FC1);
+	cv::cuda::GpuMat imFrame(imSizeRow, imSizeCol, CV_64FC1);
+	cv::cuda::GpuMat dftFrame, idftResult;
+	cv::cuda::GpuMat mulReal, mulIm;
 
 	//defining the values for maxMinLoc
 	double minVal;
@@ -157,8 +157,8 @@ void imRegGPU(Mat* planesMap, Mat* frameGray, int imSizeRow, int imSizeCol, int 
 	Point minLoc;
 
 	Size frameScale(frame1, frame2);
-	Mat frameScl;
-	resize(*frameGray, frameScl, frameScale);
+	cv::cuda::GpuMat frameScl;
+	cv::cuda::resize(*frameGpu, frameScl, frameScale);
 
 	imshow("Frame taken from video", frameScl);
 	waitKey(1);
@@ -181,3 +181,5 @@ void imRegGPU(Mat* planesMap, Mat* frameGray, int imSizeRow, int imSizeCol, int 
 
 	return;
 }
+
+*/

@@ -31,6 +31,9 @@ void visOdo(Mat* img_1, Mat* img_2, double& speedX, double& speedY)
     //Hamming distance as similarity measure
     BFMatcher matcher(NORM_HAMMING, true);
     vector<DMatch> matches; //Note that the type here is DMatch
+
+	
+
     matcher.match(img_1_descriptors, img_2_descriptors, matches);
 
     //Optimized by RANSAC algorithm
@@ -94,27 +97,19 @@ void visOdo(Mat* img_1, Mat* img_2, double& speedX, double& speedY)
 	
 
 }
-
-void Kalman(Mat Z, Mat& X_nn_1, Mat& P_nn_1, float delta_t) {
+void Kalman(Mat Z, Mat& X_nn_1, Mat& P_nn_1, float delta_t, Mat& Q) {
     int size_state = 4;
     float sigma_x = 0.5;
     float sigma_y = 0.5;
     float sigma_vx = 0.1;
     float sigma_vy = 0.1;
 
-    Z.at<float>(2, 0) = Z.at<float>(2, 0)/delta_t;
+    Z.at<float>(2, 0) = Z.at<float>(2, 0) / delta_t;
     Z.at<float>(3, 0) = Z.at<float>(3, 0) / delta_t;
 
     Mat F = Mat::eye(size_state, size_state, CV_32F);
     F.at<float>(0, 2) = delta_t;
     F.at<float>(1, 3) = delta_t;
-    Mat Q = (Mat_<float>(4, 4) <<
-        pow(delta_t, 4) / 4, 0, pow(delta_t, 3) / 2, 0,
-        0, pow(delta_t, 4) / 4, 0, pow(delta_t, 3) / 2,
-        pow(delta_t, 3) / 2, 0, pow(delta_t, 2), 0,
-        0, pow(delta_t, 3) / 2, 0, pow(delta_t, 2));
-
-
 
     Mat R = (Mat_<float>(4, 4) <<
         pow(sigma_x, 2), 0, 0, 0,
@@ -122,33 +117,25 @@ void Kalman(Mat Z, Mat& X_nn_1, Mat& P_nn_1, float delta_t) {
         0, 0, pow(sigma_vx, 2), 0,
         0, 0, 0, pow(sigma_vy, 2));
 
-    Mat P = (Mat_<float>(4, 4) <<
-        pow(delta_t, 4), 0, 2 * pow(delta_t, 3), 0,
-        0, pow(delta_t, 4), 0, 2 * pow(delta_t, 3),
-        2 * pow(delta_t, 3), 0, 4 * pow(delta_t, 2), 0,
-        0, 2 * pow(delta_t, 3), 0, 4 * pow(delta_t, 2));
+
 
     //state update estimation
     Mat X_nn = F * X_nn_1;
 
     //covariance estimate
-    Mat P_nn = F * P_nn_1 * F.t();
+    Mat P_nn = F * P_nn_1 * F.t() + Q;
 
 
     //kalman gain
     Mat S = P_nn + R;
-    Mat K = P * S.inv();
-
-
+    Mat K = P_nn * S.inv();
 
     //
-    X_nn_1 = X_nn + K * (Z - X_nn);
+    X_nn = X_nn + K * (Z - X_nn_1);
 
-    P_nn_1 = (Mat::eye(K.rows, K.rows, CV_32F) - K) * P_nn * ((Mat::eye(K.rows, K.rows, CV_32F) - K).t()) + K * R * K.t();
+    P_nn = (Mat::eye(K.rows, K.rows, CV_32F) - K) * P_nn_1 * ((Mat::eye(K.rows, K.rows, CV_32F) - K).t()) + K * R * K.t();
 
-    //H directly identity
+    P_nn_1 = P_nn;
+    X_nn_1 = X_nn;
 
-    /*cout << "xTrainData (python)  = " << endl <<
-        format(F, Formatter::FMT_PYTHON) << endl << endl;
-        */
 }
