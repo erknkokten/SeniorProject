@@ -27,6 +27,9 @@
     <ClCompile Include="imageReg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="visualOdometry.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="imageReg.h">

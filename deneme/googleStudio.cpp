@@ -1,9 +1,3 @@
-#include <math.h>
-#include <complex>
-#include <iostream>
-#include <iomanip>
-#include <complex>
-#include <stdio.h>
 #include <vector>
 #include <cmath>
 #include <fstream>
@@ -27,8 +21,8 @@
 #include <opencv2/imgcodecs.hpp>
 
 #include "imageReg.h"
+#include "visualOdometry.h"
 
-void coordinate_calculater(int target_x, int target_y, float& new_latitude, float& new_longitude);
 
 using namespace cv;
 using namespace std;
@@ -44,102 +38,100 @@ int main() {
 	//Size size(2048, 2048);
 	//Mat dst;
 	//resize(map, dst, size);
-	
-	
+
 	Mat real_part_map, im_part_map;
 	sobelCalc(dst, real_part_map, im_part_map, false);
 	Mat dftMap = dft_img(real_part_map, im_part_map, imSizeRow, imSizeCol, false);
-	
+
 	Mat realMap(imSizeRow, imSizeCol, CV_64FC1);
 	Mat imMap(imSizeRow, imSizeCol, CV_64FC1);
 	Mat planesMap[] = { Mat_<float>(realMap), Mat_<float>(imMap) };
 	split(dftMap, planesMap);
+	float delta_t = 0.2;
+	Mat Q = (Mat_<float>(4, 4) <<
+		pow(delta_t, 4) / 4, 0, pow(delta_t, 3) / 2, 0,
+		0, pow(delta_t, 4) / 4, 0, pow(delta_t, 3) / 2,
+		pow(delta_t, 3) / 2, 0, pow(delta_t, 2), 0,
+		0, pow(delta_t, 3) / 2, 0, pow(delta_t, 2));	
 	
-	
-    VideoCapture cap("C:/Users/ahmet/Desktop/Matching/framegg.mp4");
-    if (!cap.isOpened())
-        std::cout << "Video is not opened!" << std::endl;	
-	
+
+	VideoCapture cap("C:/Users/ahmet/Desktop/Matching/framegg.mp4");
+	if (!cap.isOpened())
+		std::cout << "Video is not opened!" << std::endl;
+
 	// defining the matrices for frame operations
-	Mat real_part_frame, im_part_frame;
-	Mat realFrame(imSizeRow, imSizeCol, CV_64FC1);
-	Mat imFrame(imSizeRow, imSizeCol, CV_64FC1);
-	Mat dftFrame, idftResult;
-	Mat mulReal, mulIm;
-	
-	//defining the values for maxMinLoc
-	double minVal;
-	double maxVal;
-	Point minLoc;
 	Point maxLoc;
-	
-	
+	double speedX, speedY;
+
 	// Videodan frame çekme iþlemleri baþlýyor
-	Mat frame, frameGray;
+	Mat frame, frameGray, framePrior, framePriorGray;
+	cap >> framePrior;
+	cv::cvtColor(framePrior, framePriorGray, COLOR_BGR2GRAY);
 	cap >> frame;
+
+	int pixel1 = 0;
+	int pixel2 = 0;
+
+	pixel_calculater(32.7486015, 39.8668174, pixel1, pixel2);
+
+	Mat X_0 = (Mat_<float>(4, 1) << pixel1 / 500, pixel2 / 500, 4.846 / 2, 8.747 / 2);
+	Mat P_0 = Mat::eye(4, 4, CV_32F) * 200;
+
+
 	while (!frame.empty()) {
 		auto start = chrono::high_resolution_clock::now();
-		cvtColor(frame, frameGray, COLOR_BGR2GRAY);
-
-		Size frameScale(frame1, frame2);
-		Mat frameScl;
-		resize(frameGray, frameScl, frameScale);
-
-		imshow("Frame taken from video", frameScl);
-		waitKey(1);
-
-
-		sobelCalc(frameScl, real_part_frame, im_part_frame, true);
-		dftFrame = dft_img(real_part_frame, im_part_frame, imSizeRow, imSizeCol, true);
-
-		Mat planesFrame[] = { Mat_<float>(realFrame), Mat_<float>(imFrame) };
-		split(dftFrame, planesFrame);
-
-		mulReal = planesMap[0].mul(planesFrame[0]) - planesMap[1].mul(planesFrame[1]);
-		mulIm = planesMap[0].mul(planesFrame[1]) + planesFrame[0].mul(planesMap[1]);
-
-		idftResult = idft_img(mulReal, mulIm);
-
-		minMaxLoc(idftResult, &minVal, &maxVal, &minLoc, &maxLoc);
+		cv::cvtColor(frame, frameGray, COLOR_BGR2GRAY);
 		
-		float lat, longitude;
-		coordinate_calculater(maxLoc.x - frame1 / 2, maxLoc.y - frame2 / 2, lat, longitude);
 
-		cout << "Latitude: " << lat << ", Longitude: " << longitude << endl;
+		float lat, longitude;
+		// Image Registration part
+		imReg(planesMap, &frameGray, imSizeRow, imSizeCol, frame1, frame2, lat, longitude, maxLoc);
+
+		// Visual Odometry part
+		visOdo(&framePriorGray, &frameGray, speedX, speedY);
+		speedX = 2.5/5;
+		speedY = -4.375/5;
+		
+		Mat Z = (Mat_<float>(4, 1) << (float)maxLoc.x, (float)maxLoc.y, speedX, speedY);
+		int a = 0;
+		Kalman(Z, X_0, P_0, delta_t, Q);
+		cout << "X_0 = " << endl << " " << X_0 << endl << endl;
 		cout << "Pixel Loc: " << maxLoc << "" << endl;
+
+		
+		cout << "SpeedX: " << speedX << ", SpeedY: " << speedY << "\n" << "Overall speed: " << sqrt(pow(speedX, 2) + pow(speedY, 2)) << endl;
+
+		/*cout << "SpeedX: " << speedX << ", SpeedY: " << speedY << "\n" << endl;
+		cout << "Latitude: " << lat << ", Longitude: " << longitude << endl;
+		cout << "Pixel Loc: " << maxLoc << "" << endl;*/
 		auto stop = chrono::high_resolution_clock::now();
 		auto duration = chrono::duration_cast<chrono::microseconds>(stop - start);
-		cout << "Duration: "  << duration.count() << " ms" << endl;
-		
+		cout << "Duration: " << duration.count() << " ms" << endl;
+
 		Mat found = dst;
 		Mat dstc;
-		cvtColor(found, dstc, COLOR_GRAY2BGR);
-		Point other(maxLoc.x-frame1, maxLoc.y-frame2);
-		cv::rectangle(dstc, other, maxLoc, cv::Scalar(0, 255, 0), 4);
-		
-		
+		cv::cvtColor(found, dstc, COLOR_GRAY2BGR);
+		Point p(X_0.at<float>(0, 0), X_0.at<float>(1, 0));
+		Point other(p.x - frame1, p.y - frame2);
+		Point imRegx(maxLoc.x - frame1, maxLoc.y - frame2);
+		cv::rectangle(dstc, other, p, cv::Scalar(0, 255, 0), 4);
+		cv::rectangle(dstc, maxLoc, imRegx, cv::Scalar(0, 0, 255), 4);
+
 		Size size(1024, 1024);
 		Mat foundScl;
-		resize(dstc, foundScl, size);
-		imshow("Image Location", foundScl(Range(0, 800), Range(0, 500)));
-		waitKey(1);
-		
+		cv::resize(dstc, foundScl, size);
+		cv::imshow("Image Location", foundScl(Range(0, 800), Range(0, 500)));
+		cv::waitKey(1);
+
+
+
 		cout << "\n--------------------------------------\n" << endl;
-		
+		frameGray.copyTo(framePriorGray);
 		cap >> frame;
 	}
-	
+
 	cap.release();
-	destroyAllWindows();
-	
-    return 0;
-}
+	cv::destroyAllWindows();
 
-
-void coordinate_calculater(int target_x, int target_y, float& new_latitude, float& new_longitude) {
-	float dx = (target_x -207) / 500.0;
-	float dy = (target_y - 1170) / 500.0;
-
-	new_latitude = 39.8668174 - (dy / 111);
-	new_longitude = 32.7486015 + (dx / 111) / cos(39.8668174 * CV_PI / 180);
+	return 0;
 }

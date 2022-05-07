@@ -4,6 +4,69 @@ using namespace cv;
 using namespace std;
 
 
+void coordinate_calculater(int target_x, int target_y, float& new_latitude, float& new_longitude) {
+	float dx = (target_x - 207) / 500.0;
+	float dy = (target_y - 1170) / 500.0;
+
+	new_latitude = 39.8668174 - (dy / 111);
+	new_longitude = 32.7486015 + (dx / 111) / cos(39.8668174 * CV_PI / 180);
+}
+
+void pixel_calculater(float target_lattitude, float target_longitude, int& new_x, int& new_y) {
+	int x = (int)((target_longitude - 32.7486015) * 111 * cos(39.8668174 * CV_PI / 180));
+	int y = (int)((39.8668174 - target_lattitude) * 111);
+	new_x = 500*x + 207;
+	new_y = 500*y + 1170;
+}
+
+
+/*
+	map is grayscale and have size (imSizeRow,imSizeCol)
+	frame is grayscale
+	frame1 frame width
+	frame2 frame height
+*/
+void imReg(Mat* planesMap, Mat* frameGray, int imSizeRow, int imSizeCol, int frame1, int frame2, float& lat, float& longitude, Point& maxLoc)
+{
+	// defining the matrices for frame operations
+	Mat real_part_frame, im_part_frame;
+	Mat realFrame(imSizeRow, imSizeCol, CV_64FC1);
+	Mat imFrame(imSizeRow, imSizeCol, CV_64FC1);
+	Mat dftFrame, idftResult;
+	Mat mulReal, mulIm;
+
+	//defining the values for maxMinLoc
+	double minVal;
+	double maxVal;
+	Point minLoc;
+
+	Size frameScale(frame1, frame2);
+	Mat frameScl;
+	resize(*frameGray, frameScl, frameScale);
+
+	imshow("Frame taken from video", frameScl);
+	waitKey(1);
+
+
+	sobelCalc(frameScl, real_part_frame, im_part_frame, true);
+	dftFrame = dft_img(real_part_frame, im_part_frame, imSizeRow, imSizeCol, true);
+
+	Mat planesFrame[] = { Mat_<float>(realFrame), Mat_<float>(imFrame) };
+	split(dftFrame, planesFrame);
+
+	mulReal = planesMap[0].mul(planesFrame[0]) - planesMap[1].mul(planesFrame[1]);
+	mulIm = planesMap[0].mul(planesFrame[1]) + planesFrame[0].mul(planesMap[1]);
+
+	idftResult = idft_img(mulReal, mulIm);
+
+	minMaxLoc(idftResult, &minVal, &maxVal, &minLoc, &maxLoc);
+
+	coordinate_calculater(maxLoc.x - frame1 / 2, maxLoc.y - frame2 / 2, lat, longitude);
+
+	return;
+}
+
+
 Mat dft_img(Mat& real_part, Mat& im_part, int m, int n, bool logFlag = false) {
 	Mat padded;
 	Mat padded2;
@@ -77,41 +140,46 @@ void sobelCalc(Mat& img, Mat& real_part, Mat& im_part, bool frameFlag) {
 
 	}
 }
+/*
+
+void imRegGPU(Mat* planesMap, Mat* frameGpu, int imSizeRow, int imSizeCol, int frame1, int frame2, float& lat, float& longitude, Point& maxLoc)
+{
+	// defining the matrices for frame operations
+	cv::cuda::GpuMat real_part_frame, im_part_frame;
+	cv::cuda::GpuMat realFrame(imSizeRow, imSizeCol, CV_64FC1);
+	cv::cuda::GpuMat imFrame(imSizeRow, imSizeCol, CV_64FC1);
+	cv::cuda::GpuMat dftFrame, idftResult;
+	cv::cuda::GpuMat mulReal, mulIm;
+
+	//defining the values for maxMinLoc
+	double minVal;
+	double maxVal;
+	Point minLoc;
+
+	Size frameScale(frame1, frame2);
+	cv::cuda::GpuMat frameScl;
+	cv::cuda::resize(*frameGpu, frameScl, frameScale);
+
+	imshow("Frame taken from video", frameScl);
+	waitKey(1);
 
 
-Mat dft_img2(Mat& input, int m, int n, bool logFlag = false) {
-	Mat complexI;
+	sobelCalc(frameScl, real_part_frame, im_part_frame, true);
+	dftFrame = dft_img(real_part_frame, im_part_frame, imSizeRow, imSizeCol, true);
 
-	copyMakeBorder(input, complexI, 0, m - input.rows, 0, n - input.cols, BORDER_CONSTANT, Scalar::all(0));
+	Mat planesFrame[] = { Mat_<float>(realFrame), Mat_<float>(imFrame) };
+	split(dftFrame, planesFrame);
 
-	dft(complexI, complexI);
-	return complexI;
+	mulReal = planesMap[0].mul(planesFrame[0]) - planesMap[1].mul(planesFrame[1]);
+	mulIm = planesMap[0].mul(planesFrame[1]) + planesFrame[0].mul(planesMap[1]);
 
+	idftResult = idft_img(mulReal, mulIm);
+
+	minMaxLoc(idftResult, &minVal, &maxVal, &minLoc, &maxLoc);
+
+	coordinate_calculater(maxLoc.x - frame1 / 2, maxLoc.y - frame2 / 2, lat, longitude);
+
+	return;
 }
 
-Mat idft_img2(Mat& mat) {
-
-	cv::Mat inverseTransform;
-	cv::dft(mat, inverseTransform, cv::DFT_INVERSE | DFT_REAL_OUTPUT);
-
-	return inverseTransform;
-}
-
-void sobelCalc2(Mat& img, Mat& sobel, bool frameFlag) {
-
-	cv::Mat image_X;
-	cv::Sobel(img, image_X, CV_64FC1, 1, 0, 7);
-	cv::Mat image_Y;
-	cv::Sobel(img, image_Y, CV_64FC1, 0, 1, 7);
-
-	image_X.convertTo(image_X, CV_64FC1, 1.0 / 255.0);
-	image_Y.convertTo(image_Y, CV_64FC1, 1.0 / 255.0);
-
-	cv::phase(image_X, image_Y, sobel, true);
-	cout << "burda" << endl;
-	cv::subtract(sobel, 2 * CV_PI, sobel, (sobel > CV_PI));
-
-	normalize(sobel, sobel, 0, 1, NORM_MINMAX);
-
-
-}
+*/
