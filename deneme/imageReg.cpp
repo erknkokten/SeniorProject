@@ -51,20 +51,18 @@ void imReg(Mat* planesMap, Mat* frameGray, int imSizeRow, int imSizeCol, int fra
 		int Height = frameScl.rows / 2;//getting middle point of rows//
 		int Width = frameScl.cols / 2;//getting middle point of height//
 
-		
-		
-		Mat rotMat = getRotationMatrix2D(Point(Width, Height), rotation, 1);
-		warpAffine(frameScl, frameScl, rotMat, frameScl.size());
+		Mat frameSquare = frameScl(Range(0, frameScl.rows), Range(Width-Height, Width + Height)).clone();//getting the middle part of the frame//
 
-		imshow("Rotated", frameScl);
-		waitKey(0);
-
+		Mat rotMat = getRotationMatrix2D(Point(Height, Height), rotation, 1);
+		warpAffine(frameSquare, frameSquare, rotMat, frameSquare.size());
+		imshow("square", frameSquare);
+		waitKey(1);
 		// Max min kýsým
 
-		Mat frameCopy = frameScl.clone();
+		Mat frameCopy = frameSquare.clone();
 		flip(frameCopy, frameCopy, 1);
 
-		Mat diag = frameScl.diag(0);
+		Mat diag = frameSquare.diag(0);
 		Mat nonZero;
 		findNonZero(diag, nonZero);
 		//cout << "diag: " << diag << endl;
@@ -113,7 +111,7 @@ void imReg(Mat* planesMap, Mat* frameGray, int imSizeRow, int imSizeCol, int fra
 		int size = (int)(minMax - maxMin);
 		cv::Rect crop_region((int)maxMin, (int)maxMin, size, size);
 
-		Mat cropped = frameScl(crop_region);
+		Mat cropped = frameSquare(crop_region);
 		imshow("Cropped", cropped);
 		waitKey(0);
 
@@ -197,9 +195,9 @@ Mat idft_img(Mat& real_part, Mat& im_part) {
 void sobelCalc(Mat& img, Mat& real_part, Mat& im_part, bool frameFlag) {
 
 	cv::Mat image_X;
-	cv::Sobel(img, image_X, CV_64FC1, 1, 0, 7);
+	cv::Sobel(img, image_X, CV_64FC1, 1, 0, 5);
 	cv::Mat image_Y;
-	cv::Sobel(img, image_Y, CV_64FC1, 0, 1, 7);
+	cv::Sobel(img, image_Y, CV_64FC1, 0, 1, 5);
 
 	image_X.convertTo(image_X, CV_64FC1, 1.0 / 255.0);
 	image_Y.convertTo(image_Y, CV_64FC1, 1.0 / 255.0);

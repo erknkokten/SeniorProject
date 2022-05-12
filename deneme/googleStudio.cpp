@@ -23,6 +23,11 @@
 #include "imageReg.h"
 #include "visualOdometry.h"
 
+float distance(int x1, int y1, int x2, int y2)
+{
+	// Calculating distance
+	return sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2) * 1.0);
+}
 
 using namespace cv;
 using namespace std;
@@ -30,8 +35,13 @@ using namespace std;
 #define imSizeRow 2048
 #define imSizeCol 2048
 
-#define frame1 322
-#define frame2 180
+// donmeyen definitionlar
+#define frame1 304
+#define frame2 170
+
+// donmeli.mp4 definitionlar
+//#define frame1 322
+//#define frame2 180
 
 
 int main() {
@@ -58,7 +68,7 @@ int main() {
 		0, pow(delta_t, 3) / 2, 0, pow(delta_t, 2));	
 	
 
-	VideoCapture cap("C:/Users/ahmet/Desktop/Matching/donmeli.mp4");
+	VideoCapture cap("C:/Users/ahmet/Desktop/Matching/framegg.mp4");
 	if (!cap.isOpened())
 		std::cout << "Video is not opened!" << std::endl;
 
@@ -82,7 +92,13 @@ int main() {
 
 	float rotation = 0;
 	int count = 1;
-	bool rotFlag = true;
+	bool rotFlag = false;
+
+
+	// Last true location for prohibiting imageregistration jumps
+	Point lastTrueLoc;
+	bool init = false;
+	Point imRegOut;
 
 
 	while (!frame.empty()) {
@@ -93,13 +109,22 @@ int main() {
 		float lat, longitude;
 		// Image Registration part
 		imReg(planesMap, &frameGray, imSizeRow, imSizeCol, frame1, frame2, lat, longitude, maxLoc, rotation);
-
+		imRegOut = maxLoc;
 		// Visual Odometry part
 		visOdo(&framePriorGray, &frameGray, speedX, speedY);
 		speedX = 2.5/5;
 		speedY = -4.375/5;
 		
-		Mat Z = (Mat_<float>(4, 1) << (float)maxLoc.x, (float)maxLoc.y, speedX, speedY);
+		cout << "distance: " << distance(lastTrueLoc.x, lastTrueLoc.y, maxLoc.x, maxLoc.y) << endl;
+		
+		// Eðer zýplama olursa önceki lokasyona odometriden gelen en son hýzlarý ekle
+		if (distance(lastTrueLoc.x, lastTrueLoc.y, maxLoc.x, maxLoc.y) > 10 && init) {
+			imRegOut.x = lastTrueLoc.x;
+			imRegOut.y = lastTrueLoc.y;
+		}
+		
+
+		Mat Z = (Mat_<float>(4, 1) << (float)imRegOut.x, (float)imRegOut.y, speedX, speedY);
 		int a = 0;
 
 		//maxLoc.x = maxLoc.x - 872;
@@ -124,6 +149,8 @@ int main() {
 		 
 		cv::cvtColor(found, dstc, COLOR_GRAY2BGR);
 		Point p(X_0.at<float>(0, 0), X_0.at<float>(1, 0));
+		lastTrueLoc = p;
+
 		Point other(p.x - frame1, p.y - frame2);
 		Point imRegx(maxLoc.x - frame1, maxLoc.y - frame2);
 		cv::rectangle(dstc, other, p, cv::Scalar(0, 255, 0), 4);
@@ -147,10 +174,13 @@ int main() {
 			rotFlag = false;
 			rotation = 0;
 		}
+		if (rotation == -200)
+			imwrite("C:/Users/ahmet/Desktop/Matching/dondueksi200.jpg", frameGray);
 			
 			
 		cout << "count: " << count << endl;
 		count++;
+		init = true;
 	}
 
 	cap.release();
