@@ -206,7 +206,7 @@ void sobelCalc(Mat& img, Mat& real_part, Mat& im_part, bool frameFlag) {
 	cv::phase(image_X, image_Y, orientation, true);
 	cv::subtract(orientation, 2 * CV_PI, orientation, (orientation > CV_PI));
 
-	normalize(orientation, orientation, 0, 1, NORM_MINMAX);
+	//normalize(orientation, orientation, -1, 1, NORM_MINMAX);
 
 	cv::Mat cos(orientation.rows, orientation.cols, CV_64FC1, CV_PI / 2);
 	cv::Mat orientation_two = 2 * orientation;

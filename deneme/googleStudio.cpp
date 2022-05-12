@@ -68,7 +68,7 @@ int main() {
 		0, pow(delta_t, 3) / 2, 0, pow(delta_t, 2));	
 	
 
-	VideoCapture cap("C:/Users/ahmet/Desktop/Matching/framegg.mp4");
+	VideoCapture cap("C:/Users/ahmet/Desktop/Matching/donmeli.mp4");
 	if (!cap.isOpened())
 		std::cout << "Video is not opened!" << std::endl;
 
@@ -92,7 +92,7 @@ int main() {
 
 	float rotation = 0;
 	int count = 1;
-	bool rotFlag = false;
+	bool rotFlag = true;
 
 
 	// Last true location for prohibiting imageregistration jumps
