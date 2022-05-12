@@ -18,7 +18,7 @@ Mat idft_img(Mat& real_part, Mat& im_part);
 void sobelCalc(Mat& img, Mat& real_part, Mat& im_part, bool frameFlag);
 void coordinate_calculater(int target_x, int target_y, float& new_latitude, float& new_longitude);
 void pixel_calculater(float target_lattitude, float target_longitude, int& new_x, int& new_y);
-void imReg(Mat* planesMap, Mat* frameGray, int imSizeRow, int imSizeCol, int frame1, int frame2, float& lat, float& longitude, Point& maxLoc);
+void imReg(Mat* planesMap, Mat* frameGray, int imSizeRow, int imSizeCol, int frame1, int frame2, float& lat, float& longitude, Point& maxLoc, float rotation);
 
 
 

@@ -26,7 +26,7 @@ void pixel_calculater(float target_lattitude, float target_longitude, int& new_x
 	frame1 frame width
 	frame2 frame height
 */
-void imReg(Mat* planesMap, Mat* frameGray, int imSizeRow, int imSizeCol, int frame1, int frame2, float& lat, float& longitude, Point& maxLoc)
+void imReg(Mat* planesMap, Mat* frameGray, int imSizeRow, int imSizeCol, int frame1, int frame2, float& lat, float& longitude, Point& maxLoc, float rotation)
 {
 	// defining the matrices for frame operations
 	Mat real_part_frame, im_part_frame;
@@ -47,36 +47,136 @@ void imReg(Mat* planesMap, Mat* frameGray, int imSizeRow, int imSizeCol, int fra
 	imshow("Frame taken from video", frameScl);
 	waitKey(1);
 
+	if (rotation != 0) {
+		int Height = frameScl.rows / 2;//getting middle point of rows//
+		int Width = frameScl.cols / 2;//getting middle point of height//
 
-	sobelCalc(frameScl, real_part_frame, im_part_frame, true);
-	dftFrame = dft_img(real_part_frame, im_part_frame, imSizeRow, imSizeCol, true);
+		
+		
+		Mat rotMat = getRotationMatrix2D(Point(Width, Height), rotation, 1);
+		warpAffine(frameScl, frameScl, rotMat, frameScl.size());
 
-	Mat planesFrame[] = { Mat_<float>(realFrame), Mat_<float>(imFrame) };
-	split(dftFrame, planesFrame);
+		imshow("Rotated", frameScl);
+		waitKey(0);
 
-	mulReal = planesMap[0].mul(planesFrame[0]) - planesMap[1].mul(planesFrame[1]);
-	mulIm = planesMap[0].mul(planesFrame[1]) + planesFrame[0].mul(planesMap[1]);
+		// Max min kýsým
 
-	idftResult = idft_img(mulReal, mulIm);
+		Mat frameCopy = frameScl.clone();
+		flip(frameCopy, frameCopy, 1);
 
-	minMaxLoc(idftResult, &minVal, &maxVal, &minLoc, &maxLoc);
+		Mat diag = frameScl.diag(0);
+		Mat nonZero;
+		findNonZero(diag, nonZero);
+		//cout << "diag: " << diag << endl;
+		cout << endl;
+		
+		
+		Mat a, b;
+		Mat nonZeroSplit[] = { Mat_<float>(a), Mat_<float>(b) };
 
-	coordinate_calculater(maxLoc.x - frame1 / 2, maxLoc.y - frame2 / 2, lat, longitude);
+		split(nonZero, nonZeroSplit);
+		//cout << "\nnonZero: " << nonZeroSplit[1] << endl;
+		
+		minMaxLoc(nonZeroSplit[1], &minVal, &maxVal, &minLoc, &maxLoc);
 
-	return;
+
+		Mat diag2 = frameCopy.diag(0);
+		Mat nonZero2;
+		findNonZero(diag2, nonZero2);
+		//cout << "diag: " << diag2 << endl;
+		cout << endl;
+
+		double minVal2;
+		double maxVal2;
+		Point minLoc2;
+		Point maxLoc2;
+		Mat a2, b2;
+		Mat nonZeroSplit2[] = { Mat_<float>(a2), Mat_<float>(b2) };
+
+		split(nonZero2, nonZeroSplit2);
+		//cout << "\nnonZero: " << nonZeroSplit2[1] << endl;
+
+		minMaxLoc(nonZeroSplit2[1], &minVal2, &maxVal2, &minLoc2, &maxLoc2);
+
+		
+		int maxMin = (int)minVal;
+		int minMax = (int) maxVal;
+		if (maxMin < minVal2)
+			maxMin = minVal2;
+		
+		if(minMax > maxVal2)
+			minMax = maxVal2;
+
+
+
+
+		int size = (int)(minMax - maxMin);
+		cv::Rect crop_region((int)maxMin, (int)maxMin, size, size);
+
+		Mat cropped = frameScl(crop_region);
+		imshow("Cropped", cropped);
+		waitKey(0);
+
+		sobelCalc(cropped, real_part_frame, im_part_frame, true);
+		dftFrame = dft_img(real_part_frame, im_part_frame, imSizeRow, imSizeCol, true);
+
+		Mat planesFrame[] = { Mat_<float>(realFrame), Mat_<float>(imFrame) };
+		split(dftFrame, planesFrame);
+
+
+		mulReal = planesMap[0].mul(planesFrame[0]) - planesMap[1].mul(planesFrame[1]);
+		mulIm = planesMap[0].mul(planesFrame[1]) + planesFrame[0].mul(planesMap[1]);
+
+
+		idftResult = idft_img(mulReal, mulIm);
+
+		minMaxLoc(idftResult, &minVal, &maxVal, &minLoc, &maxLoc);
+
+		coordinate_calculater(maxLoc.x - frame1 / 2, maxLoc.y - frame2 / 2, lat, longitude);
+
+		return;
+	}
+	
+	else {
+
+		sobelCalc(frameScl, real_part_frame, im_part_frame, true);
+		dftFrame = dft_img(real_part_frame, im_part_frame, imSizeRow, imSizeCol, true);
+
+		Mat planesFrame[] = { Mat_<float>(realFrame), Mat_<float>(imFrame) };
+		split(dftFrame, planesFrame);
+
+
+		mulReal = planesMap[0].mul(planesFrame[0]) - planesMap[1].mul(planesFrame[1]);
+		mulIm = planesMap[0].mul(planesFrame[1]) + planesFrame[0].mul(planesMap[1]);
+
+
+		idftResult = idft_img(mulReal, mulIm);
+
+		minMaxLoc(idftResult, &minVal, &maxVal, &minLoc, &maxLoc);
+
+		coordinate_calculater(maxLoc.x - frame1 / 2, maxLoc.y - frame2 / 2, lat, longitude);
+
+		return;
+		
+	}
+	
 }
 
 
 Mat dft_img(Mat& real_part, Mat& im_part, int m, int n, bool logFlag = false) {
 	Mat padded;
 	Mat padded2;
+	
 	copyMakeBorder(real_part, padded, 0, m - real_part.rows, 0, n - real_part.cols, BORDER_CONSTANT, Scalar::all(0));
 	copyMakeBorder(im_part, padded2, 0, m - im_part.rows, 0, n - im_part.cols, BORDER_CONSTANT, Scalar::all(0));
+	//copyMakeBorder(real_part, padded, (m - real_part.rows) / 2, (m - real_part.rows)/2, (n - real_part.cols) / 2, (n - real_part.cols)/2, BORDER_CONSTANT, Scalar::all(0));
+	//copyMakeBorder(im_part, padded2, (m - im_part.rows) / 2, (m - im_part.rows)/2, (n - im_part.cols) / 2, (n - im_part.cols) / 2, BORDER_CONSTANT, Scalar::all(0));
 	Mat planes[] = { Mat_<float>(padded), Mat_<float>(padded2) };
 	Mat complexI;
 	
 	merge(planes, 2, complexI);
 	dft(complexI, complexI);
+	
 	return complexI;
 
 }
@@ -139,6 +239,7 @@ void sobelCalc(Mat& img, Mat& real_part, Mat& im_part, bool frameFlag) {
 		im_part = -1 * im_part;
 
 	}
+	
 }
 /*
 

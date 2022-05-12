@@ -30,14 +30,16 @@ using namespace std;
 #define imSizeRow 2048
 #define imSizeCol 2048
 
-#define frame1 304
-#define frame2 171
+#define frame1 322
+#define frame2 180
+
 
 int main() {
 	Mat dst = imread("C:/Users/ahmet/Desktop/Matching/2048lik.jpg", IMREAD_GRAYSCALE);
-	//Size size(2048, 2048);
+
 	//Mat dst;
-	//resize(map, dst, size);
+	//copyMakeBorder(adst, dst, (imSizeRow - adst.rows) / 2, (imSizeRow - adst.rows) / 2, (imSizeCol - adst.cols) / 2, (imSizeCol - adst.cols) / 2, BORDER_CONSTANT, Scalar::all(0));
+	
 
 	Mat real_part_map, im_part_map;
 	sobelCalc(dst, real_part_map, im_part_map, false);
@@ -47,6 +49,7 @@ int main() {
 	Mat imMap(imSizeRow, imSizeCol, CV_64FC1);
 	Mat planesMap[] = { Mat_<float>(realMap), Mat_<float>(imMap) };
 	split(dftMap, planesMap);
+
 	float delta_t = 0.2;
 	Mat Q = (Mat_<float>(4, 4) <<
 		pow(delta_t, 4) / 4, 0, pow(delta_t, 3) / 2, 0,
@@ -55,7 +58,7 @@ int main() {
 		0, pow(delta_t, 3) / 2, 0, pow(delta_t, 2));	
 	
 
-	VideoCapture cap("C:/Users/ahmet/Desktop/Matching/framegg.mp4");
+	VideoCapture cap("C:/Users/ahmet/Desktop/Matching/donmeli.mp4");
 	if (!cap.isOpened())
 		std::cout << "Video is not opened!" << std::endl;
 
@@ -77,6 +80,10 @@ int main() {
 	Mat X_0 = (Mat_<float>(4, 1) << pixel1 / 500, pixel2 / 500, 4.846 / 2, 8.747 / 2);
 	Mat P_0 = Mat::eye(4, 4, CV_32F) * 200;
 
+	float rotation = 0;
+	int count = 1;
+	bool rotFlag = true;
+
 
 	while (!frame.empty()) {
 		auto start = chrono::high_resolution_clock::now();
@@ -85,7 +92,7 @@ int main() {
 
 		float lat, longitude;
 		// Image Registration part
-		imReg(planesMap, &frameGray, imSizeRow, imSizeCol, frame1, frame2, lat, longitude, maxLoc);
+		imReg(planesMap, &frameGray, imSizeRow, imSizeCol, frame1, frame2, lat, longitude, maxLoc, rotation);
 
 		// Visual Odometry part
 		visOdo(&framePriorGray, &frameGray, speedX, speedY);
@@ -94,6 +101,10 @@ int main() {
 		
 		Mat Z = (Mat_<float>(4, 1) << (float)maxLoc.x, (float)maxLoc.y, speedX, speedY);
 		int a = 0;
+
+		//maxLoc.x = maxLoc.x - 872;
+		//maxLoc.y = maxLoc.y + 1109;
+
 		Kalman(Z, X_0, P_0, delta_t, Q);
 		cout << "X_0 = " << endl << " " << X_0 << endl << endl;
 		cout << "Pixel Loc: " << maxLoc << "" << endl;
@@ -110,6 +121,7 @@ int main() {
 
 		Mat found = dst;
 		Mat dstc;
+		 
 		cv::cvtColor(found, dstc, COLOR_GRAY2BGR);
 		Point p(X_0.at<float>(0, 0), X_0.at<float>(1, 0));
 		Point other(p.x - frame1, p.y - frame2);
@@ -128,6 +140,17 @@ int main() {
 		cout << "\n--------------------------------------\n" << endl;
 		frameGray.copyTo(framePriorGray);
 		cap >> frame;
+		if ((rotation > -360) && rotFlag) {
+			rotation = rotation - 1;
+		}
+		else if (rotation == -360) {
+			rotFlag = false;
+			rotation = 0;
+		}
+			
+			
+		cout << "count: " << count << endl;
+		count++;
 	}
 
 	cap.release();
