@@ -48,74 +48,8 @@ void imReg(Mat* planesMap, Mat* frameGray, int imSizeRow, int imSizeCol, int fra
 	waitKey(1);
 
 	if (rotation != 0) {
-		int Height = frameScl.rows / 2;//getting middle point of rows//
-		int Width = frameScl.cols / 2;//getting middle point of height//
-
-		Mat frameSquare = frameScl(Range(0, frameScl.rows), Range(Width-Height, Width + Height)).clone();//getting the middle part of the frame//
-
-		Mat rotMat = getRotationMatrix2D(Point(Height, Height), rotation, 1);
-		warpAffine(frameSquare, frameSquare, rotMat, frameSquare.size());
-		imshow("square", frameSquare);
-		waitKey(1);
-		// Max min kýsým
-
-		Mat frameCopy = frameSquare.clone();
-		flip(frameCopy, frameCopy, 1);
-
-		Mat diag = frameSquare.diag(0);
-		Mat nonZero;
-		findNonZero(diag, nonZero);
-		//cout << "diag: " << diag << endl;
-		cout << endl;
 		
-		
-		Mat a, b;
-		Mat nonZeroSplit[] = { Mat_<float>(a), Mat_<float>(b) };
-
-		split(nonZero, nonZeroSplit);
-		//cout << "\nnonZero: " << nonZeroSplit[1] << endl;
-		
-		minMaxLoc(nonZeroSplit[1], &minVal, &maxVal, &minLoc, &maxLoc);
-
-
-		Mat diag2 = frameCopy.diag(0);
-		Mat nonZero2;
-		findNonZero(diag2, nonZero2);
-		//cout << "diag: " << diag2 << endl;
-		cout << endl;
-
-		double minVal2;
-		double maxVal2;
-		Point minLoc2;
-		Point maxLoc2;
-		Mat a2, b2;
-		Mat nonZeroSplit2[] = { Mat_<float>(a2), Mat_<float>(b2) };
-
-		split(nonZero2, nonZeroSplit2);
-		//cout << "\nnonZero: " << nonZeroSplit2[1] << endl;
-
-		minMaxLoc(nonZeroSplit2[1], &minVal2, &maxVal2, &minLoc2, &maxLoc2);
-
-		
-		int maxMin = (int)minVal;
-		int minMax = (int) maxVal;
-		if (maxMin < minVal2)
-			maxMin = minVal2;
-		
-		if(minMax > maxVal2)
-			minMax = maxVal2;
-
-
-
-
-		int size = (int)(minMax - maxMin);
-		cv::Rect crop_region((int)maxMin, (int)maxMin, size, size);
-
-		Mat cropped = frameSquare(crop_region);
-		imshow("Cropped", cropped);
-		waitKey(0);
-
-		sobelCalc(cropped, real_part_frame, im_part_frame, true);
+		sobelCalcRotate(*frameGray, frame1, frame2, real_part_frame, im_part_frame, true, rotation);
 		dftFrame = dft_img(real_part_frame, im_part_frame, imSizeRow, imSizeCol, true);
 
 		Mat planesFrame[] = { Mat_<float>(realFrame), Mat_<float>(imFrame) };
@@ -206,7 +140,7 @@ void sobelCalc(Mat& img, Mat& real_part, Mat& im_part, bool frameFlag) {
 	cv::phase(image_X, image_Y, orientation, true);
 	cv::subtract(orientation, 2 * CV_PI, orientation, (orientation > CV_PI));
 
-	normalize(orientation, orientation, 0, 1, NORM_MINMAX);
+	//normalize(orientation, orientation, 0, 1, NORM_MINMAX);
 
 	cv::Mat cos(orientation.rows, orientation.cols, CV_64FC1, CV_PI / 2);
 	cv::Mat orientation_two = 2 * orientation;
@@ -237,6 +171,194 @@ void sobelCalc(Mat& img, Mat& real_part, Mat& im_part, bool frameFlag) {
 		im_part = -1 * im_part;
 
 	}
+	cout << "burdayým" << endl;
+	
+}
+
+
+void sobelCalcRotate(Mat& img, int frame1, int frame2, Mat& real_part, Mat& im_part, bool frameFlag, float rotation) {
+
+	double minVal;
+	double maxVal;
+	Point minLoc;
+	Point maxLoc;
+
+
+	cv::Mat image_X;
+	cv::Sobel(img, image_X, CV_64FC1, 1, 0, 5);
+	cv::Mat image_Y;
+	cv::Sobel(img, image_Y, CV_64FC1, 0, 1, 5);
+
+	image_X.convertTo(image_X, CV_64FC1, 1.0 / 255.0);
+	image_Y.convertTo(image_Y, CV_64FC1, 1.0 / 255.0);
+
+	cv::Mat orientation;
+	cv::phase(image_X, image_Y, orientation, true);
+
+	float rotation_rad = rotation * CV_PI / 180;
+	
+	cv::subtract(orientation, 2 * CV_PI, orientation, (orientation > CV_PI));
+	
+	cv::subtract(orientation, -rotation_rad, orientation);
+
+	cv::Mat cos(orientation.rows, orientation.cols, CV_64FC1, CV_PI / 2);
+	cv::Mat orientation_two = 2 * orientation;
+	cv::Mat sq_oc = orientation_two.mul(orientation_two);
+	//busin
+	cv::Mat sin_fin = orientation_two - ((sq_oc.mul(orientation_two)) / 6);
+
+
+	cv::Mat cos_oc = cos - orientation_two;
+	cv::Mat cos_sq = cos_oc.mul(cos_oc);
+
+	//bucos
+	cv::Mat cos_fin = cos_oc - ((cos_sq.mul(cos_oc)) / 6);
+
+
+	cv::Mat Magn = image_X + image_Y;
+
+	Mat real_a, im_a;
+
+	real_a = Magn.mul(cos_fin);
+	im_a = Magn.mul(sin_fin);
+
+	if (frameFlag) {
+
+		flip(real_a, real_a, 0);
+		flip(real_a, real_a, 1);
+		flip(im_a, im_a, 0);
+		flip(im_a, im_a, 1);
+
+		im_a = -1 * im_a;
+
+	}
+
+	Size frameScale(frame1, frame2);
+	Mat real_partScl, im_partScl;
+	resize(real_a, real_partScl, frameScale);
+	resize(im_a, im_partScl, frameScale);
+	
+
+
+	int Height = im_partScl.rows / 2;//getting middle point of rows//
+	int Width = im_partScl.cols / 2;//getting middle point of height//
+
+	Mat im_partSquare = im_partScl(Range(0, im_partScl.rows), Range(Width - Height, Width + Height)).clone();//getting the middle part of the frame//
+	Mat real_partSquare = real_partScl(Range(0, real_partScl.rows), Range(Width - Height, Width + Height)).clone();//getting the middle part of the frame//
+
+	Mat rotMat = getRotationMatrix2D(Point(Height, Height), rotation, 1);
+	warpAffine(im_partSquare, im_partSquare, rotMat, im_partSquare.size());
+
+	rotMat = getRotationMatrix2D(Point(Height, Height), rotation, 1);
+	warpAffine(real_partSquare, real_partSquare, rotMat, real_partSquare.size());
+	
+
+
+	
+	// REAL PART ROTATION SONRASI KIRPIÞ
+	Mat real_partCopy = real_partSquare.clone();
+	flip(real_partCopy, real_partCopy, 1);
+
+	Mat diag_real = real_partSquare.diag(0);
+	Mat nonZero_real;
+	findNonZero(diag_real, nonZero_real);
+	//cout << "diag: " << diag << endl;
+	cout << endl;
+
+
+	Mat a_real, b_real;
+	Mat nonZeroSplit_real[] = { Mat_<float>(a_real), Mat_<float>(b_real) };
+
+	split(nonZero_real, nonZeroSplit_real);
+	//cout << "\nnonZero: " << nonZeroSplit[1] << endl;
+
+	minMaxLoc(nonZeroSplit_real[1], &minVal, &maxVal, &minLoc, &maxLoc);
+
+
+	Mat diag2_real = real_partCopy.diag(0);
+	Mat nonZero2_real;
+	findNonZero(diag2_real, nonZero2_real);
+	//cout << "diag: " << diag2 << endl;
+	cout << endl;
+
+	double minVal2;
+	double maxVal2;
+	Point minLoc2;
+	Point maxLoc2;
+	Mat a2_real, b2_real;
+	Mat nonZeroSplit2_real[] = { Mat_<float>(a2_real), Mat_<float>(b2_real) };
+
+	split(nonZero2_real, nonZeroSplit2_real);
+	//cout << "\nnonZero: " << nonZeroSplit2[1] << endl;
+
+	minMaxLoc(nonZeroSplit2_real[1], &minVal2, &maxVal2, &minLoc2, &maxLoc2);
+
+
+	int maxMin = (int)minVal;
+	int minMax = (int)maxVal;
+	if (maxMin < minVal2)
+		maxMin = minVal2;
+
+	if (minMax > maxVal2)
+		minMax = maxVal2;
+
+	int size = (int)(minMax - maxMin);
+	cv::Rect crop_region((int)maxMin, (int)maxMin, size, size);
+
+	Mat cropped_real = real_partSquare(crop_region);
+
+
+	// BURDAN SONRA IM PARTI YAP KNK
+
+	Mat im_partCopy = im_partSquare.clone();
+	flip(im_partCopy, im_partCopy, 1);
+
+	Mat diag_im = im_partSquare.diag(0);
+	Mat nonZero_im;
+	findNonZero(diag_im, nonZero_im);
+	//cout << "diag: " << diag << endl;
+	cout << endl;
+
+
+	Mat a_im, b_im;
+	Mat nonZeroSplit_im[] = { Mat_<float>(a_im), Mat_<float>(b_im) };
+
+	split(nonZero_im, nonZeroSplit_im);
+	//cout << "\nnonZero: " << nonZeroSplit[1] << endl;
+
+	minMaxLoc(nonZeroSplit_im[1], &minVal, &maxVal, &minLoc, &maxLoc);
+
+
+	Mat diag2_im = im_partCopy.diag(0);
+	Mat nonZero2_im;
+	findNonZero(diag2_im, nonZero2_im);
+	//cout << "diag: " << diag2 << endl;
+	cout << endl;
+
+	Mat a2, b2;
+	Mat nonZeroSplit2[] = { Mat_<float>(a2), Mat_<float>(b2) };
+
+	split(nonZero2_im, nonZeroSplit2);
+	//cout << "\nnonZero: " << nonZeroSplit2[1] << endl;
+
+	minMaxLoc(nonZeroSplit2[1], &minVal2, &maxVal2, &minLoc2, &maxLoc2);
+
+
+	maxMin = (int)minVal;
+	minMax = (int)maxVal;
+	if (maxMin < minVal2)
+		maxMin = minVal2;
+
+	if (minMax > maxVal2)
+		minMax = maxVal2;
+
+	size = (int)(minMax - maxMin);
+	cv::Rect crop_region2((int)maxMin, (int)maxMin, size, size);
+
+	Mat cropped_im = im_partSquare(crop_region2);
+
+	real_part = cropped_real.clone();
+	im_part = cropped_im.clone();
 	
 }
 /*

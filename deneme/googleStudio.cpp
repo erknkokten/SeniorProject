@@ -36,12 +36,12 @@ using namespace std;
 #define imSizeCol 2048
 
 // donmeyen definitionlar
-#define frame1 304
-#define frame2 170
+//#define frame1 304
+//#define frame2 170
 
 // donmeli.mp4 definitionlar
-//#define frame1 322
-//#define frame2 180
+#define frame1 322
+#define frame2 180
 
 
 int main() {
@@ -68,7 +68,7 @@ int main() {
 		0, pow(delta_t, 3) / 2, 0, pow(delta_t, 2));	
 	
 
-	VideoCapture cap("C:/Users/ahmet/Desktop/Matching/framegg.mp4");
+	VideoCapture cap("C:/Users/ahmet/Desktop/Matching/donmeli.mp4");
 	if (!cap.isOpened())
 		std::cout << "Video is not opened!" << std::endl;
 
@@ -92,7 +92,7 @@ int main() {
 
 	float rotation = 0;
 	int count = 1;
-	bool rotFlag = false;
+	bool rotFlag = true;
 
 
 	// Last true location for prohibiting imageregistration jumps
@@ -121,7 +121,8 @@ int main() {
 		if (distance(lastTrueLoc.x, lastTrueLoc.y, maxLoc.x, maxLoc.y) > 10 && init) {
 			imRegOut.x = lastTrueLoc.x;
 			imRegOut.y = lastTrueLoc.y;
-		}
+		}// KALMAN  error engelleme
+		init = true;
 		
 
 		Mat Z = (Mat_<float>(4, 1) << (float)imRegOut.x, (float)imRegOut.y, speedX, speedY);
@@ -180,7 +181,8 @@ int main() {
 			
 		cout << "count: " << count << endl;
 		count++;
-		init = true;
+		
+		
 	}
 
 	cap.release();
