@@ -3,8 +3,42 @@
 using namespace cv;
 using namespace std;
 
+// This function converts decimal degrees to radians
+double deg2rad(double deg) {
+	return (deg * M_PI / 180);
+};
 
-void coordinate_calculater(int target_x, int target_y, float& new_latitude, float& new_longitude) {
+//  This function converts radians to decimal degrees
+double rad2deg(double rad) {
+	return (rad * 180 / M_PI);
+};
+
+
+void MyLine(Mat img, Point start, Point end, int x, int y, int z)
+{
+	int thickness = 1;
+	int lineType = LINE_AA;
+	line(img,
+		start,
+		end,
+		Scalar(255, 255, 255),
+		thickness,
+		lineType);
+}
+
+
+double distanceEarth(double lat1d, double lon1d, double lat2d, double lon2d) {
+	double lat1r, lon1r, lat2r, lon2r, u, v;
+	lat1r = deg2rad(lat1d);
+	lon1r = deg2rad(lon1d);
+	lat2r = deg2rad(lat2d);
+	lon2r = deg2rad(lon2d);
+	u = sin((lat2r - lat1r) / 2);
+	v = sin((lon2r - lon1r) / 2);
+	return 2.0 * earthRadiusKm * asin(sqrt(u * u + cos(lat1r) * cos(lat2r) * v * v));
+}
+
+void coordinate_calculator(int target_x, int target_y, float& new_latitude, float& new_longitude) {
 	float dx = (target_x - 207) / 500.0;
 	float dy = (target_y - 1170) / 500.0;
 
@@ -12,11 +46,29 @@ void coordinate_calculater(int target_x, int target_y, float& new_latitude, floa
 	new_longitude = 32.7486015 + (dx / 111) / cos(39.8668174 * CV_PI / 180);
 }
 
+void coordinate_calculater(int pointx, int pointy, int target_x, int target_y, float& new_latitude, float& new_longitude, double angle) {
+
+	float new_target_x = target_x * cos(-angle) - target_y * sin(-angle);
+	float new_target_y = target_x * sin(-angle) + target_y * cos(-angle);
+
+	float new_pointx = pointx * cos(-angle) - pointy * sin(-angle);
+	float new_pointy = pointx * sin(-angle) + pointy * cos(-angle);
+
+
+
+	float dx = (new_target_x - new_pointx) / 500.0;
+	float dy = (new_target_y - new_pointy) / 500.0;
+
+	new_latitude = 39.8668174 - (dy / 111);
+	new_longitude = 32.7486015 + (dx / 111) / cos(39.8668174 * CV_PI / 180);
+}
+
+
 void pixel_calculater(float target_lattitude, float target_longitude, int& new_x, int& new_y) {
-	int x = (int)((target_longitude - 32.7486015) * 111 * cos(39.8668174 * CV_PI / 180));
-	int y = (int)((39.8668174 - target_lattitude) * 111);
-	new_x = 500*x + 207;
-	new_y = 500*y + 1170;
+	float x = ((target_longitude - 32.7486015) * 111 * cos(39.8668174 * CV_PI / 180));
+	float y = ((39.8668174 - target_lattitude) * 111);
+	new_x = (int)(500 * x + 207);
+	new_y = (int)(500 * y + 1170);
 }
 
 
@@ -44,120 +96,26 @@ void imReg(Mat* planesMap, Mat* frameGray, int imSizeRow, int imSizeCol, int fra
 	Mat frameScl;
 	resize(*frameGray, frameScl, frameScale);
 
-	imshow("Frame taken from video", frameScl);
-	waitKey(1);
+	sobelCalc(frameScl, real_part_frame, im_part_frame, true);
+	dftFrame = dft_img(real_part_frame, im_part_frame, imSizeRow, imSizeCol, true);
 
-	if (rotation != 0) {
-		int Height = frameScl.rows / 2;//getting middle point of rows//
-		int Width = frameScl.cols / 2;//getting middle point of height//
-
-		Mat frameSquare = frameScl(Range(0, frameScl.rows), Range(Width-Height, Width + Height)).clone();//getting the middle part of the frame//
-
-		Mat rotMat = getRotationMatrix2D(Point(Height, Height), rotation, 1);
-		warpAffine(frameSquare, frameSquare, rotMat, frameSquare.size());
-		imshow("square", frameSquare);
-		waitKey(1);
-		// Max min kýsým
-
-		Mat frameCopy = frameSquare.clone();
-		flip(frameCopy, frameCopy, 1);
-
-		Mat diag = frameSquare.diag(0);
-		Mat nonZero;
-		findNonZero(diag, nonZero);
-		//cout << "diag: " << diag << endl;
-		cout << endl;
-		
-		
-		Mat a, b;
-		Mat nonZeroSplit[] = { Mat_<float>(a), Mat_<float>(b) };
-
-		split(nonZero, nonZeroSplit);
-		//cout << "\nnonZero: " << nonZeroSplit[1] << endl;
-		
-		minMaxLoc(nonZeroSplit[1], &minVal, &maxVal, &minLoc, &maxLoc);
+	Mat planesFrame[] = { Mat_<float>(realFrame), Mat_<float>(imFrame) };
+	split(dftFrame, planesFrame);
 
 
-		Mat diag2 = frameCopy.diag(0);
-		Mat nonZero2;
-		findNonZero(diag2, nonZero2);
-		//cout << "diag: " << diag2 << endl;
-		cout << endl;
-
-		double minVal2;
-		double maxVal2;
-		Point minLoc2;
-		Point maxLoc2;
-		Mat a2, b2;
-		Mat nonZeroSplit2[] = { Mat_<float>(a2), Mat_<float>(b2) };
-
-		split(nonZero2, nonZeroSplit2);
-		//cout << "\nnonZero: " << nonZeroSplit2[1] << endl;
-
-		minMaxLoc(nonZeroSplit2[1], &minVal2, &maxVal2, &minLoc2, &maxLoc2);
-
-		
-		int maxMin = (int)minVal;
-		int minMax = (int) maxVal;
-		if (maxMin < minVal2)
-			maxMin = minVal2;
-		
-		if(minMax > maxVal2)
-			minMax = maxVal2;
+	mulReal = planesMap[0].mul(planesFrame[0]) - planesMap[1].mul(planesFrame[1]);
+	mulIm = planesMap[0].mul(planesFrame[1]) + planesFrame[0].mul(planesMap[1]);
 
 
+	idftResult = idft_img(mulReal, mulIm);
+
+	minMaxLoc(idftResult, &minVal, &maxVal, &minLoc, &maxLoc);
+
+	coordinate_calculator(maxLoc.x - frame1 / 2, maxLoc.y - frame2 / 2, lat, longitude);
+
+	return;
 
 
-		int size = (int)(minMax - maxMin);
-		cv::Rect crop_region((int)maxMin, (int)maxMin, size, size);
-
-		Mat cropped = frameSquare(crop_region);
-		imshow("Cropped", cropped);
-		waitKey(0);
-
-		sobelCalc(cropped, real_part_frame, im_part_frame, true);
-		dftFrame = dft_img(real_part_frame, im_part_frame, imSizeRow, imSizeCol, true);
-
-		Mat planesFrame[] = { Mat_<float>(realFrame), Mat_<float>(imFrame) };
-		split(dftFrame, planesFrame);
-
-
-		mulReal = planesMap[0].mul(planesFrame[0]) - planesMap[1].mul(planesFrame[1]);
-		mulIm = planesMap[0].mul(planesFrame[1]) + planesFrame[0].mul(planesMap[1]);
-
-
-		idftResult = idft_img(mulReal, mulIm);
-
-		minMaxLoc(idftResult, &minVal, &maxVal, &minLoc, &maxLoc);
-
-		coordinate_calculater(maxLoc.x - frame1 / 2, maxLoc.y - frame2 / 2, lat, longitude);
-
-		return;
-	}
-	
-	else {
-
-		sobelCalc(frameScl, real_part_frame, im_part_frame, true);
-		dftFrame = dft_img(real_part_frame, im_part_frame, imSizeRow, imSizeCol, true);
-
-		Mat planesFrame[] = { Mat_<float>(realFrame), Mat_<float>(imFrame) };
-		split(dftFrame, planesFrame);
-
-
-		mulReal = planesMap[0].mul(planesFrame[0]) - planesMap[1].mul(planesFrame[1]);
-		mulIm = planesMap[0].mul(planesFrame[1]) + planesFrame[0].mul(planesMap[1]);
-
-
-		idftResult = idft_img(mulReal, mulIm);
-
-		minMaxLoc(idftResult, &minVal, &maxVal, &minLoc, &maxLoc);
-
-		coordinate_calculater(maxLoc.x - frame1 / 2, maxLoc.y - frame2 / 2, lat, longitude);
-
-		return;
-		
-	}
-	
 }
 
 

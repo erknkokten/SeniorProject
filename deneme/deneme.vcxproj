@@ -157,7 +157,6 @@
     <ClCompile Include="imageReg.cpp" />
     <ClCompile Include="Source.cpp" />
     <ClCompile Include="visualOdometry.cpp" />
-    <ClCompile Include="videoMain.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="imageReg.h" />

@@ -18,9 +18,6 @@
     <ClCompile Include="Source.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="videoMain.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="googleStudio.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -33,6 +30,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="imageReg.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="visualOdometry.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
