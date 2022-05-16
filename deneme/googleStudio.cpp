@@ -1,57 +1,116 @@
-#include <vector>
-#include <cmath>
+// opencv-test.cpp : Bu dosya 'main' iþlevi içeriyor. Program yürütme orada baþlayýp biter.
+//
+
+#include <iostream>
 #include <fstream>
 #include <string>
+#include <vector>
+#include <math.h>
+#include <cmath>
 #include <windows.h>
-#include <chrono>
-
-#include "opencv2/core.hpp"
-#include "opencv2/highgui.hpp"
-#include "opencv2/features2d.hpp"
-#include "opencv2/xfeatures2d.hpp"
-#include "opencv2/xfeatures2d/nonfree.hpp"
-#include <opencv2/core/utils/logger.hpp>
-#include <opencv2/opencv.hpp>
-#include <opencv2/features2d.hpp>
-#include <opencv2/videoio.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/calib3d.hpp>
-#include <opencv2/highgui.hpp> 
-#include <opencv2/features2d.hpp>
+//#include <graphics.h>
+#include <stdio.h>
+#include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>
-
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
+#include <chrono>
 #include "imageReg.h"
 #include "visualOdometry.h"
+using namespace std::chrono;
 
-float distance(int x1, int y1, int x2, int y2)
-{
-	// Calculating distance
-	return sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2) * 1.0);
-}
 
+#define SCALE_VALUE 500.0
 using namespace cv;
 using namespace std;
 
-#define imSizeRow 2048
-#define imSizeCol 2048
+# define M_PI 3.141592653589793238462643383279502884
+#define earthRadiusKm 6371.0
+#define W 2048
+#define H 2048
 
-// donmeyen definitionlar
-//#define frame1 304
-//#define frame2 170
 
-// donmeli.mp4 definitionlar
-#define frame1 322
-#define frame2 180
+// BURASI ÖNEMLÝ HARD CODED YAPIOZ
+//#define croppedImSize 512
 
 #define rowSize 180
 #define colSize 322
+#define frame1 colSize
+#define frame2 rowSize
 
-extern float reflon = 0.0;
-extern float reflat = 0.0;
+
+
+
+
+
+/* SON BULDUÐUMUZ LOCATÝONIN ETRAFINDAN NE KADAR KESECEÐÝMÝZÝ BELÝRTEN DEFÝNÝTÝONLAR
+#define rightCut (croppedImSize/2)-(colSize/2)
+#define leftCut (croppedImSize/2)+(colSize/2)
+#define topCut (croppedImSize/2)+(rowSize/2)
+#define bottomCut (croppedImSize/2)-(rowSize/2)
+*/
+
+
+float reflon = 0.0;
+float reflat = 0.0;
+
+// This function converts decimal degrees to radians
+double deg2rad(double deg) {
+	return (deg * M_PI / 180);
+};
+
+//  This function converts radians to decimal degrees
+double rad2deg(double rad) {
+	return (rad * 180 / M_PI);
+};
+
+
+void MyLine(Mat img, Point start, Point end, int x, int y, int z)
+{
+	int thickness = 1;
+	int lineType = LINE_AA;
+	line(img,
+		start,
+		end,
+		Scalar(255, 255, 255),
+		thickness,
+		lineType);
+}
+
+
+double distanceEarth(double lat1d, double lon1d, double lat2d, double lon2d) {
+	double lat1r, lon1r, lat2r, lon2r, u, v;
+	lat1r = deg2rad(lat1d);
+	lon1r = deg2rad(lon1d);
+	lat2r = deg2rad(lat2d);
+	lon2r = deg2rad(lon2d);
+	u = sin((lat2r - lat1r) / 2);
+	v = sin((lon2r - lon1r) / 2);
+	return 2.0 * earthRadiusKm * asin(sqrt(u * u + cos(lat1r) * cos(lat2r) * v * v));
+}
+
+
+
+void coordinate_calculater(int pointx, int pointy, int target_x, int target_y, float& new_latitude, float& new_longitude, double angle) {
+
+	float new_target_x = target_x * cos(-angle) - target_y * sin(-angle);
+	float new_target_y = target_x * sin(-angle) + target_y * cos(-angle);
+
+	float new_pointx = pointx * cos(-angle) - pointy * sin(-angle);
+	float new_pointy = pointx * sin(-angle) + pointy * cos(-angle);
+
+
+
+	float dx = (new_target_x - new_pointx) / 500.0;
+	float dy = (new_target_y - new_pointy) / 500.0;
+
+	new_latitude = 39.8668174 - (dy / 111);
+	new_longitude = 32.7486015 + (dx / 111) / cos(39.8668174 * CV_PI / 180);
+}
 
 
 int main() {
-	
+
 	double speedX, speedY;
 
 	// Döndürmeli imreg için deðiþkenler dft alýnacak size ve haritadan croplanacak küçük alan için
@@ -68,7 +127,7 @@ int main() {
 
 	// Düz haritada bastýrmak için haritayý okuma
 	Mat dst = imread("C:/Users/ahmet/Desktop/Matching/2048lik.jpg");
-	
+
 	// BURALAR ARALIN KODU
 	float Xmax;
 	float Xmin;
@@ -185,7 +244,7 @@ int main() {
 	// ARALIN KODU BÝTTÝ
 
 
-	
+
 	VideoCapture cap("C:/Users/ahmet/Desktop/Matching/donmeli.mp4");
 	if (!cap.isOpened())
 		std::cout << "Video is not opened!" << std::endl;
@@ -194,7 +253,7 @@ int main() {
 	int pixel1 = 0;
 	int pixel2 = 0;
 	pixel_calculater(32.7486015, 39.8668174, pixel1, pixel2);
-	
+
 	Mat X_0 = (Mat_<float>(4, 1) << pixel1 / 500, pixel2 / 500, 4.846 / 2, 8.747 / 2);
 	Mat P_0 = Mat::eye(4, 4, CV_32F) * 200;
 	float delta_t = 0.2;
@@ -213,7 +272,7 @@ int main() {
 	// Last true location for prohibiting image registration jumps
 	Point lastTrueLoc;
 	bool init = false;
-	
+
 	// Videodan frame çekme iþlemleri baþlýyor
 	Mat frame, frameGray, framePrior, framePriorGray;
 	cap >> framePrior;
@@ -224,7 +283,7 @@ int main() {
 	while (!frame.empty()) {
 		auto start = chrono::high_resolution_clock::now();
 		cv::cvtColor(frame, frameGray, COLOR_BGR2GRAY);
-		
+
 		// Clearing the rook image
 		rook_image = Mat::zeros(H, W, CV_8UC1);
 
@@ -274,9 +333,9 @@ int main() {
 		// Pixel locations of reference point
 		int refPixelRow = rotated_mat_x.at<float>(0, 0);
 		int refPixelCol = rotated_mat_y.at<float>(0, 0);
-		
+
 		// BURDAN ÝTÝBAREN ELÝMÝZDE DÖNMÜÞ ROOK_ÝMAGE VAR BUNU CROPLAYIP MATCH ETCEZ
-		
+
 		// Croppin parts in order to stay þin the rook image, 512x512 square is cutted depending on the previously known pixel location
 		int up = ((previousPixelRow - topCut) > 0) ? (previousPixelRow - topCut) : 0;
 		int bottom = (previousPixelRow + bottomCut) < H - 1 ? (previousPixelRow + bottomCut) : H - 1;
@@ -294,7 +353,7 @@ int main() {
 		Mat real_part_map, im_part_map;
 		sobelCalc(rook_cropped, real_part_map, im_part_map, false);
 		Mat dftMap = dft_img(real_part_map, im_part_map, dftSize, dftSize, false);
-		
+
 		// Ýmage reg için gerekli matrislerin hazýrlanmasý
 		Mat realMap(dftSize, dftSize, CV_64FC1);
 		Mat imMap(dftSize, dftSize, CV_64FC1);
@@ -319,23 +378,23 @@ int main() {
 
 		// Visual Odometry part
 		visOdo(&framePriorGray, &frameGray, speedX, speedY);
-		
+
 		// visodo speed iyi sonuç vermediði için elle speed besleme
-		speedX = 2.5/5;
-		speedY = -4.375/5;
-		
-		
+		speedX = 2.5 / 5;
+		speedY = -4.375 / 5;
+
+
 		// Eðer zýplama olursa önceki lokasyona odometriden gelen en son hýzlarý ekle
-		
+
 		/*
 		if (distance(lastTrueLoc.x, lastTrueLoc.y, maxLoc.x, maxLoc.y) > 10 && init) {
 			imRegOut.x = lastTrueLoc.x;
 			imRegOut.y = lastTrueLoc.y;
 		}
 		*/
-		
+
 		// Pixel locationlarý dönmüþ halden nortun yukarýyý gösterdiði hale çevirme
-		float new_target_x = (imRegOut.x - 161) * cos(-angle) - (imRegOut.y-90) * sin(-angle);
+		float new_target_x = (imRegOut.x - 161) * cos(-angle) - (imRegOut.y - 90) * sin(-angle);
 		float new_target_y = (imRegOut.x - 161) * sin(-angle) + (imRegOut.y - 90) * cos(-angle);
 
 		Mat Z = (Mat_<float>(4, 1) << new_target_x, new_target_y, speedX, speedY);
@@ -345,7 +404,7 @@ int main() {
 		//cout << "X_0 = " << endl << " " << X_0 << endl << endl;
 		//cout << "Pixel Loc: " << maxLoc << "" << endl;
 
-		
+
 		//cout << "SpeedX: " << speedX << ", SpeedY: " << speedY << "\n" << "Overall speed: " << sqrt(pow(speedX, 2) + pow(speedY, 2)) << endl;
 
 		/*cout << "SpeedX: " << speedX << ", SpeedY: " << speedY << "\n" << endl;
@@ -354,16 +413,16 @@ int main() {
 
 
 		Mat dstc = dst.clone();
-		 
+
 		Point kalmanEstimationPoint(X_0.at<float>(0, 0), X_0.at<float>(1, 0));
 		Point imRegEstimationPoint(new_target_x, new_target_y);
-				
-		lastTrueLoc.x = kalmanEstimationPoint.x* cos(angle) - kalmanEstimationPoint.y * sin(angle);
+
+		lastTrueLoc.x = kalmanEstimationPoint.x * cos(angle) - kalmanEstimationPoint.y * sin(angle);
 		lastTrueLoc.y = kalmanEstimationPoint.x * sin(angle) + kalmanEstimationPoint.y * cos(angle);
 
 		cout << "Kalman Estimation Point: " << kalmanEstimationPoint << endl;
 		cout << "ImReg Estimation Point: " << imRegEstimationPoint << endl;
-		
+
 		circle(dstc, kalmanEstimationPoint, 7, Scalar(0, 255, 0), 7);
 		circle(dstc, imRegEstimationPoint, 7, Scalar(0, 0, 255), 7);
 
@@ -372,14 +431,14 @@ int main() {
 		cv::resize(dstc, foundScl, size);
 		cv::imshow("Image Location", foundScl(Range(0, 800), Range(0, 500)));
 		cv::waitKey(1);
-		
+
 		Size frameScale(frame1, frame2);
 		Mat frameScl;
 		resize(frameGray, frameScl, frameScale);
 
 		imshow("Frame taken from video", frameScl);
 		waitKey(1);
-		
+
 		// BURANIN ALTI BÝ SONRAKÝ COMMENTA KADAR DEBUG ICIN
 		Mat found = rook_image.clone();
 		Mat dstcx;
@@ -397,7 +456,7 @@ int main() {
 		cv::imshow("Image LocationXD", foundScl31(Range(0, 1024), Range(0, 1024)));
 		cv::waitKey(0);
 		// DEBUG SONU
-		
+
 
 		cout << "\n--------------------------------------\n" << endl;
 		frameGray.copyTo(framePriorGray);
@@ -410,12 +469,12 @@ int main() {
 			rotFlag = false;
 			rotation = 0;
 		}
-			
-			
+
+
 		//cout << "count: " << count << endl;
 		countFrame++;
 		init = true;
-		
+
 	}
 
 	cap.release();
@@ -423,3 +482,6 @@ int main() {
 
 	return 0;
 }
+
+
+
