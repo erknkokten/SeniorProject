@@ -35,6 +35,10 @@ using namespace std;
 
 #define rowSize 180
 #define colSize 322
+
+//#define rowSize 124
+//#define colSize 221
+
 #define frame1 colSize
 #define frame2 rowSize
 
@@ -244,8 +248,8 @@ int main() {
 	// ARALIN KODU BÝTTÝ
 
 
-
-	VideoCapture cap("C:/Users/ahmet/Desktop/Matching/donmeli.mp4");
+	// dönemelison.mp4 -> drivedaki Adsýz5fps.mp4
+	VideoCapture cap("C:/Users/ahmet/Desktop/Matching/donmelison.mp4");
 	if (!cap.isOpened())
 		std::cout << "Video is not opened!" << std::endl;
 
@@ -376,7 +380,25 @@ int main() {
 		// atlama engeli için maxLoc u imRegouta kaydettik
 		Point imRegOut = maxLoc;
 
+		// eþlenen frame'in orta noktasýný bulmak
+		Point imRegOutCenter(imRegOut.x - 161, imRegOut.y-90);
+		
+		//offset çýkar sonra döndür
+		float offsetx = maxLoc.x - refPixelRow-(colSize/2);
+		float offsety = maxLoc.y - refPixelCol-(rowSize/2);
+		
+		//offsetx ve offsety deðerleri geri döndür
+		float offsetx_rotateback = offsetx*cos(-angle) - offsety* sin(-angle);
+		float offsety_rotateback = offsetx*sin(-angle) + offsety*cos(-angle);
+		
+		// döndürülmemiþ offseti ekle
+		int offsetx_new = offsetx_rotateback + 207;
+		int offsety_new = offsety_rotateback +1170;
+		
+
+
 		// Visual Odometry part
+		
 		visOdo(&framePriorGray, &frameGray, speedX, speedY);
 
 		// visodo speed iyi sonuç vermediði için elle speed besleme
@@ -393,11 +415,13 @@ int main() {
 		}
 		*/
 
-		// Pixel locationlarý dönmüþ halden nortun yukarýyý gösterdiði hale çevirme
-		float new_target_x = (imRegOut.x - 161) * cos(-angle) - (imRegOut.y - 90) * sin(-angle);
-		float new_target_y = (imRegOut.x - 161) * sin(-angle) + (imRegOut.y - 90) * cos(-angle);
 
-		Mat Z = (Mat_<float>(4, 1) << new_target_x, new_target_y, speedX, speedY);
+
+		// Pixel locationlarý dönmüþ halden nortun yukarýyý gösterdiði hale çevirme
+		//float new_target_x = (imRegOut.x - 161) * cos(-angle) - (imRegOut.y - 90) * sin(-angle);
+		//float new_target_y = (imRegOut.x - 161) * sin(-angle) + (imRegOut.y - 90) * cos(-angle);
+
+		Mat Z = (Mat_<float>(4, 1) << offsetx_new, offsety_new, speedX, speedY);
 		int a = 0;
 
 		Kalman(Z, X_0, P_0, delta_t, Q);
@@ -408,17 +432,19 @@ int main() {
 		//cout << "SpeedX: " << speedX << ", SpeedY: " << speedY << "\n" << "Overall speed: " << sqrt(pow(speedX, 2) + pow(speedY, 2)) << endl;
 
 		/*cout << "SpeedX: " << speedX << ", SpeedY: " << speedY << "\n" << endl;
-		cout << "Latitude: " << lat << ", Longitude: " << longitude << endl;
+		cout << "Latitude: " w
+		
+		<< lat << ", Longitude: " << longitude << endl;
 		cout << "Pixel Loc: " << maxLoc << "" << endl;*/
 
 
 		Mat dstc = dst.clone();
 
 		Point kalmanEstimationPoint(X_0.at<float>(0, 0), X_0.at<float>(1, 0));
-		Point imRegEstimationPoint(new_target_x, new_target_y);
+		Point imRegEstimationPoint(offsetx_new, offsety_new);
 
-		lastTrueLoc.x = kalmanEstimationPoint.x * cos(angle) - kalmanEstimationPoint.y * sin(angle);
-		lastTrueLoc.y = kalmanEstimationPoint.x * sin(angle) + kalmanEstimationPoint.y * cos(angle);
+		//lastTrueLoc.x = kalmanEstimationPoint.x * cos(angle) - kalmanEstimationPoint.y * sin(angle);
+		//lastTrueLoc.y = kalmanEstimationPoint.x * sin(angle) + kalmanEstimationPoint.y * cos(angle);
 
 		cout << "Kalman Estimation Point: " << kalmanEstimationPoint << endl;
 		cout << "ImReg Estimation Point: " << imRegEstimationPoint << endl;
@@ -444,12 +470,12 @@ int main() {
 		Mat dstcx;
 
 		cv::cvtColor(found, dstcx, COLOR_GRAY2BGR);
-		Point rook_center(maxLoc.x - 160, maxLoc.y - 89);
-		Point rook_center2(maxLoc.x - 162, maxLoc.y - 91);
+		//Point rook_center(maxLoc.x - 160, maxLoc.y - 89);
+		//Point rook_center2(maxLoc.x - 162, maxLoc.y - 91);
 
 		Point imRegx(maxLoc.x - colSize, maxLoc.y - rowSize);
 		cv::rectangle(dstcx, maxLoc, imRegx, cv::Scalar(0, 0, 255), 4);
-		cv::rectangle(dstcx, rook_center, rook_center2, cv::Scalar(0, 255, 0), 4);
+		//cv::rectangle(dstcx, rook_center, rook_center2, cv::Scalar(0, 255, 0), 4);
 		Size size31(1024, 1024);
 		Mat foundScl31;
 		cv::resize(dstcx, foundScl31, size31);
