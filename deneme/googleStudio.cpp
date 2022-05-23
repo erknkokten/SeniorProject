@@ -281,9 +281,23 @@ int main() {
 	Mat frame, frameGray, framePrior, framePriorGray;
 	cap >> framePrior;
 	cv::cvtColor(framePrior, framePriorGray, COLOR_BGR2GRAY);
+	copyMakeBorder(framePriorGray, framePriorGray, (2048 - framePriorGray.rows) / 2, (2048 - framePriorGray.rows) / 2, (2048 - framePriorGray.cols) / 2, (2048 - framePriorGray.cols) / 2, BORDER_CONSTANT, Scalar::all(0));
+
+
+	int Height = framePriorGray.rows / 2;   //getting middle point of rows//
+	int Width = framePriorGray.cols / 2;    //getting middle point of height//
+
+
+	// rotating the first frame
+	int Rotation1 = 0;
+	Mat for_Rotation = getRotationMatrix2D(Point(Width, Height), (Rotation1), 1);   //affine transformation matrix for 2D rotation//
+	Mat for_Rotated;//declaring a matrix for rotated image
+	warpAffine(framePriorGray, framePriorGray, for_Rotation, framePriorGray.size());    //applying affine transformation//
+
+	
 	cap >> frame;
 
-
+	float rotationOld = 0;
 	while (!frame.empty()) {
 		auto start = chrono::high_resolution_clock::now();
 		cv::cvtColor(frame, frameGray, COLOR_BGR2GRAY);
@@ -395,11 +409,18 @@ int main() {
 		int offsetx_new = offsetx_rotateback + 207;
 		int offsety_new = offsety_rotateback +1170;
 		
+		// Showing the frame
+		Size frameScale(frame1, frame2);
+		Mat frameScl;
+		resize(frameGray, frameScl, frameScale);
+
+		imshow("Frame taken from video", frameScl);
+		waitKey(1);
+		
 
 
 		// Visual Odometry part
-		
-		visOdo(&framePriorGray, &frameGray, speedX, speedY);
+		visOdo(&framePriorGray, &frameGray, speedX, speedY, rotation);
 
 		// visodo speed iyi sonuç vermediði için elle speed besleme
 		speedX = 2.5 / 5;
@@ -458,12 +479,6 @@ int main() {
 		cv::imshow("Image Location", foundScl(Range(0, 800), Range(0, 500)));
 		cv::waitKey(1);
 
-		Size frameScale(frame1, frame2);
-		Mat frameScl;
-		resize(frameGray, frameScl, frameScale);
-
-		imshow("Frame taken from video", frameScl);
-		waitKey(1);
 
 		// BURANIN ALTI BÝ SONRAKÝ COMMENTA KADAR DEBUG ICIN
 		Mat found = rook_image.clone();
@@ -496,7 +511,7 @@ int main() {
 			rotation = 0;
 		}
 
-
+		rotationOld = rotation;
 		//cout << "count: " << count << endl;
 		countFrame++;
 		init = true;

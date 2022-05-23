@@ -1,7 +1,17 @@
 #include "visualOdometry.h"
 
-void visOdo(Mat* img_1, Mat* img_2, double& speedX, double& speedY)
+void visOdo(Mat* img_1, Mat* img_2, double& speedX, double& speedY, float rotation)
 {
+	// Resmi döndürme ve zero padding olaylarý yapýlacak
+    copyMakeBorder(*img_2, *img_2, (2048 - img_2->rows) / 2, (2048 - img_2->rows) / 2, (2048 - img_2->cols) / 2, (2048 - img_2->cols) / 2, BORDER_CONSTANT, Scalar::all(0));
+    int Height = img_2->rows / 2;   //getting middle point of rows//
+    int Width = img_2->cols / 2;    //getting middle point of height//
+
+    Mat for_Rotation = getRotationMatrix2D(Point(Width, Height), (rotation), 1);   //affine transformation matrix for 2D rotation//
+    Mat for_Rotated;//declaring a matrix for rotated image
+    warpAffine(*img_2, *img_2, for_Rotation, img_2->size());    //applying affine transformation//
+
+
     double xc1 = 0;
     double xc2 = 0;
     double yc1 = 0;
@@ -89,10 +99,15 @@ void visOdo(Mat* img_1, Mat* img_2, double& speedX, double& speedY)
     speedX = resultX / count;
     speedY = resultY / count;
 
-    /*Mat match_img2;
+	/*
+    Mat match_img2;
     cv::drawMatches(*img_1, img_1_keypoints, *img_2, img_2_keypoints, matches, match_img2, Scalar(0, 0, 255), Scalar::all(-1), matchesMask);
-    cv::imshow("Optimized matching", match_img2);
-    cv:: waitKey(1);*/
+    Size scale(1024, 512);
+    Mat match_imScl;
+    resize(match_img2, match_imScl, scale);
+	
+    cv::imshow("Optimized matching", match_imScl);
+    cv:: waitKey(0);*/
 
 
 
