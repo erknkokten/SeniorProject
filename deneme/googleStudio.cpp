@@ -17,6 +17,7 @@
 #include <chrono>
 #include "imageReg.h"
 #include "visualOdometry.h"
+#include "ins.h"
 using namespace std::chrono;
 
 
@@ -42,17 +43,6 @@ using namespace std;
 #define frame1 colSize
 #define frame2 rowSize
 
-
-
-
-
-
-/* SON BULDUÐUMUZ LOCATÝONIN ETRAFINDAN NE KADAR KESECEÐÝMÝZÝ BELÝRTEN DEFÝNÝTÝONLAR
-#define rightCut (croppedImSize/2)-(colSize/2)
-#define leftCut (croppedImSize/2)+(colSize/2)
-#define topCut (croppedImSize/2)+(rowSize/2)
-#define bottomCut (croppedImSize/2)-(rowSize/2)
-*/
 
 
 float reflon = 0.0;
@@ -114,7 +104,13 @@ void coordinate_calculater(int pointx, int pointy, int target_x, int target_y, f
 
 
 int main() {
-
+	// INS variables
+	float roll, pitch, yaw, altitude, latGT, longGT, timeStamp;
+	
+	// For initializing the INS system
+	insCall(roll, pitch, yaw, altitude, latGT, longGT, timeStamp);
+	
+	
 	double speedX, speedY;
 
 	// Döndürmeli imreg için deðiþkenler dft alýnacak size ve haritadan croplanacak küçük alan için
@@ -299,6 +295,32 @@ int main() {
 
 	float rotationOld = 0;
 	while (!frame.empty()) {
+		
+		// Calling the INS 10 times and getting the average
+		roll = 0, pitch = 0, yaw = 0, altitude=0, latGT=0, longGT=0;
+
+		for (int i = 0; i < 10; i++) {
+			float rollTemp, pitchTemp, yawTemp, altitudeTemp, latGTTemp, longGTTemp;
+			insCall(rollTemp, pitchTemp, yawTemp, altitudeTemp, latGTTemp, longGTTemp, timeStamp);
+			roll += rollTemp;
+			pitch += pitchTemp;
+			yaw += yawTemp;
+			altitude += altitudeTemp;
+			latGT += latGTTemp;
+			longGT += longGTTemp;
+		}
+		roll = roll / 10;
+		pitch = pitch / 10;
+		yaw = yaw / 10;
+		altitude = altitude / 10;
+		latGT = latGT / 10;
+		longGT = longGT / 10;
+		
+		// Eðer yaw batýyý gösteriyosa, bu dereceye göre döndürme yap
+		float insRotation = 90 - yaw;
+		// Eðer kuzeyi gösteriyosa
+		insRotation = -yaw;
+
 		auto start = chrono::high_resolution_clock::now();
 		cv::cvtColor(frame, frameGray, COLOR_BGR2GRAY);
 
