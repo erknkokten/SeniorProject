@@ -319,9 +319,9 @@ int main() {
 		*/
 		
 		// Eðer yaw batýyý gösteriyosa, bu dereceye göre döndürme yap
-		float insRotation = 90 - yaw;
+		//float insRotation = 90 - yaw;
 		// Eðer kuzeyi gösteriyosa
-		insRotation = -yaw;
+		//insRotation = -yaw;
 
 		auto start = chrono::high_resolution_clock::now();
 		cv::cvtColor(frame, frameGray, COLOR_BGR2GRAY);
