@@ -297,11 +297,12 @@ int main() {
 	while (!frame.empty()) {
 		
 		// Calling the INS 10 times and getting the average
+		/*
 		roll = 0, pitch = 0, yaw = 0, altitude=0, latGT=0, longGT=0;
 
 		for (int i = 0; i < 10; i++) {
 			float rollTemp, pitchTemp, yawTemp, altitudeTemp, latGTTemp, longGTTemp;
-			//insCall(rollTemp, pitchTemp, yawTemp, altitudeTemp, latGTTemp, longGTTemp, timeStamp);
+			insCall(rollTemp, pitchTemp, yawTemp, altitudeTemp, latGTTemp, longGTTemp, timeStamp);
 			roll += rollTemp;
 			pitch += pitchTemp;
 			yaw += yawTemp;
@@ -315,7 +316,7 @@ int main() {
 		altitude = altitude / 10;
 		latGT = latGT / 10;
 		longGT = longGT / 10;
-		
+		*/
 		
 		// Eðer yaw batýyý gösteriyosa, bu dereceye göre döndürme yap
 		float insRotation = 90 - yaw;
