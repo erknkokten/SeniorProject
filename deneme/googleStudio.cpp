@@ -384,7 +384,7 @@ int main() {
 		int left = (previousPixelCol - leftCut) > 0 ? previousPixelCol - leftCut : 0;
 		int right = (previousPixelCol + rightCut) < W - 1 ? previousPixelCol + rightCut : W - 1;
 
-		cout << "up: " << up << " bottom: " << bottom << " left: " << left << " right: " << right << endl;
+		//cout << "up: " << up << " bottom: " << bottom << " left: " << left << " right: " << right << endl;
 
 		// Croplanmýþ rook_image'ý bastýrmak
 		Mat rook_cropped = rook_image(Range(up, bottom), Range(left, right));
@@ -486,16 +486,16 @@ int main() {
 		Mat dstc = dst.clone();
 
 		Point kalmanEstimationPoint(X_0.at<float>(0, 0), X_0.at<float>(1, 0));
-		Point imRegEstimationPoint(offsetx_new, offsety_new);
+		float kalmanLat, kalmanLong;
+		
+		coordinate_calculator((int)kalmanEstimationPoint.x, (int)kalmanEstimationPoint.y, kalmanLat, kalmanLong);
 
 		//lastTrueLoc.x = kalmanEstimationPoint.x * cos(angle) - kalmanEstimationPoint.y * sin(angle);
 		//lastTrueLoc.y = kalmanEstimationPoint.x * sin(angle) + kalmanEstimationPoint.y * cos(angle);
 
-		cout << "Kalman Estimation Point: " << kalmanEstimationPoint << endl;
-		cout << "ImReg Estimation Point: " << imRegEstimationPoint << endl;
+		cout << "Kalman Estimation Point: " << kalmanLat << "-" << kalmanLong << endl;
 
 		circle(dstc, kalmanEstimationPoint, 7, Scalar(0, 255, 0), 7);
-		circle(dstc, imRegEstimationPoint, 7, Scalar(0, 0, 255), 7);
 
 		Size size(1024, 1024);
 		Mat foundScl;
