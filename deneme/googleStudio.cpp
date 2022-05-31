@@ -108,7 +108,7 @@ int main() {
 	float roll, pitch, yaw, altitude, latGT, longGT, timeStamp;
 	
 	// For initializing the INS system
-	insCall(roll, pitch, yaw, altitude, latGT, longGT, timeStamp);
+	//insCall(roll, pitch, yaw, altitude, latGT, longGT, timeStamp);
 	
 	
 	double speedX, speedY;
@@ -301,7 +301,7 @@ int main() {
 
 		for (int i = 0; i < 10; i++) {
 			float rollTemp, pitchTemp, yawTemp, altitudeTemp, latGTTemp, longGTTemp;
-			insCall(rollTemp, pitchTemp, yawTemp, altitudeTemp, latGTTemp, longGTTemp, timeStamp);
+			//insCall(rollTemp, pitchTemp, yawTemp, altitudeTemp, latGTTemp, longGTTemp, timeStamp);
 			roll += rollTemp;
 			pitch += pitchTemp;
 			yaw += yawTemp;
@@ -315,6 +315,7 @@ int main() {
 		altitude = altitude / 10;
 		latGT = latGT / 10;
 		longGT = longGT / 10;
+		
 		
 		// Eðer yaw batýyý gösteriyosa, bu dereceye göre döndürme yap
 		float insRotation = 90 - yaw;
