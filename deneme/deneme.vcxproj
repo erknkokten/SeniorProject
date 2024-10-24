@@ -155,12 +155,14 @@
   <ItemGroup>
     <ClCompile Include="googleStudio.cpp" />
     <ClCompile Include="imageReg.cpp" />
-    <ClCompile Include="Source.cpp" />
+    <ClCompile Include="ins.cpp" />
+    <ClCompile Include="serialib.cpp" />
     <ClCompile Include="visualOdometry.cpp" />
-    <ClCompile Include="videoMain.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="imageReg.h" />
+    <ClInclude Include="ins.h" />
+    <ClInclude Include="serialib.h" />
     <ClInclude Include="visualOdometry.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

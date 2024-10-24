@@ -15,12 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Source.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="videoMain.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="googleStudio.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -30,9 +24,24 @@
     <ClCompile Include="visualOdometry.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ins.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="serialib.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="imageReg.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="visualOdometry.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ins.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="serialib.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

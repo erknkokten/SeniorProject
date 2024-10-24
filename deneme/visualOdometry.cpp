@@ -1,7 +1,17 @@
 #include "visualOdometry.h"
 
-void visOdo(Mat* img_1, Mat* img_2, double& speedX, double& speedY)
+void visOdo(Mat* img_1, Mat* img_2, double& speedX, double& speedY, float rotation)
 {
+	// Resmi döndürme ve zero padding olaylarý yapýlacak
+    copyMakeBorder(*img_2, *img_2, (2048 - img_2->rows) / 2, (2048 - img_2->rows) / 2, (2048 - img_2->cols) / 2, (2048 - img_2->cols) / 2, BORDER_CONSTANT, Scalar::all(0));
+    int Height = img_2->rows / 2;   //getting middle point of rows//
+    int Width = img_2->cols / 2;    //getting middle point of height//
+
+    Mat for_Rotation = getRotationMatrix2D(Point(Width, Height), (rotation), 1);   //affine transformation matrix for 2D rotation//
+    Mat for_Rotated;//declaring a matrix for rotated image
+    warpAffine(*img_2, *img_2, for_Rotation, img_2->size());    //applying affine transformation//
+
+
     double xc1 = 0;
     double xc2 = 0;
     double yc1 = 0;
@@ -9,7 +19,7 @@ void visOdo(Mat* img_1, Mat* img_2, double& speedX, double& speedY)
     double velocity = 0;
     double degrees = 0;
     //double speedX=0, speedY=0;
-	
+
     double x1index = 0, x2index = 0;
     double y1index = 0, y2index = 0;
 
@@ -32,7 +42,7 @@ void visOdo(Mat* img_1, Mat* img_2, double& speedX, double& speedY)
     BFMatcher matcher(NORM_HAMMING, true);
     vector<DMatch> matches; //Note that the type here is DMatch
 
-	
+
 
     matcher.match(img_1_descriptors, img_2_descriptors, matches);
 
@@ -65,12 +75,12 @@ void visOdo(Mat* img_1, Mat* img_2, double& speedX, double& speedY)
             y1index = points1[i].y;
             y2index = points2[i].y;
 
-			double shiftX = x2index - x1index;
-			double shiftY = y2index - y1index;
-			
-			resultX = resultX + shiftX;
-			resultY = resultY + shiftY;
-			
+            double shiftX = x2index - x1index;
+            double shiftY = y2index - y1index;
+
+            resultX = resultX + shiftX;
+            resultY = resultY + shiftY;
+
             /*xc1 = (x1index - cx) * height * sx / focallength;
             xc2 = (x2index - cx) * height * sx / focallength;
             yc1 = (y1index - cy) * height * sy / focallength;
@@ -81,20 +91,25 @@ void visOdo(Mat* img_1, Mat* img_2, double& speedX, double& speedY)
 
             matchesMask[i] = 1;
             count = count + 1;
-			
-			/*speedX = speedX + xc2 - xc1;
-			speedY = speedY + yc2 - yc1;*/
+
+            /*speedX = speedX + xc2 - xc1;
+            speedY = speedY + yc2 - yc1;*/
         }
     }
     speedX = resultX / count;
     speedY = resultY / count;
-	
-    /*Mat match_img2;
+
+	/*
+    Mat match_img2;
     cv::drawMatches(*img_1, img_1_keypoints, *img_2, img_2_keypoints, matches, match_img2, Scalar(0, 0, 255), Scalar::all(-1), matchesMask);
-    cv::imshow("Optimized matching", match_img2);
-    cv:: waitKey(1);*/
+    Size scale(1024, 512);
+    Mat match_imScl;
+    resize(match_img2, match_imScl, scale);
 	
-	
+    cv::imshow("Optimized matching", match_imScl);
+    cv:: waitKey(0);*/
+
+
 
 }
 void Kalman(Mat Z, Mat& X_nn_1, Mat& P_nn_1, float delta_t, Mat& Q) {
